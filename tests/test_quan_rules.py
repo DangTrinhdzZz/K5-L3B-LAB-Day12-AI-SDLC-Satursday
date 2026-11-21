@@ -99,6 +99,14 @@ class Serve(unittest.TestCase):
                             inputs=[{"tick": 0, "interact": True}], ticks=3)
             self.assertEqual(events(rows, "served"), [])
 
+    def test_tip_when_patience_ratio_exactly_half(self):
+        # PRD-0 F: boa nếu tỷ lệ kiên nhẫn còn lại sau bước 1 ĐẠT tip_min_patience_ratio (>=)
+        with Workdir() as w:
+            b = self._served_block()
+            b["customers"][0]["patience_ticks_left"] = 1801  # sau bước 1 còn 1800/3600 = 0.5
+            rows = run_quan(w, b, inputs=[{"tick": 0, "interact": True}], ticks=2)
+            self.assertEqual(events(rows, "served")[0]["data"]["tip"], 12)
+
 
 class Customers(unittest.TestCase):
     def test_customer_arrives_at_first_tick(self):

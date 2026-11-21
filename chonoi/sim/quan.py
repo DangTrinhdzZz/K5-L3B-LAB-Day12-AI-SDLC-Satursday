@@ -292,7 +292,7 @@ class QuanSim:
             return
         base = self.hand["base_price"]
         ratio = c["patience_ticks_left"] / self.patience_full
-        tip = math.floor(base * self.t["tip_rate"]) if ratio > self.t["tip_min_patience_ratio"] else 0
+        tip = math.floor(base * self.t["tip_rate"]) if ratio >= self.t["tip_min_patience_ratio"] else 0
         c["state"], c["order_status"] = "eating", "served"
         c["eat_ticks_left"] = self.eat_full
         c["base_price"], c["tip"] = base, tip
