@@ -42,7 +42,7 @@ class Freshness:
         self.quan_per_tick = frac(f["quan_decay_per_s"]) / TICK_HZ
 
     def is_spoiled(self, it) -> bool:
-        return frac(it["fresh"]) <= self.threshold
+        return frac(it["fresh"]) < self.threshold  # ươn khi fresh < spoiled_below (đúng 30 chưa ươn)
 
     def decay(self, items, per_tick, location):
         """Hao tươi một tick (kẹp đáy 0). Trả (events spoiled theo id, danh sách id vừa ươn)."""
@@ -58,7 +58,7 @@ class Freshness:
     def freshest(self, items, kind, n, exclude=()):
         """n cá thể chưa ươn của `kind` tươi nhất, hòa theo id; None nếu không đủ."""
         cands = [it for it in items if it["kind"] == kind and it["id"] not in exclude and not self.is_spoiled(it)]
-        cands.sort(key=lambda it: (-frac(it["fresh"]), id_key(it["id"])))  # tươi nhất trước, hòa theo id
+        cands.sort(key=lambda it: (-it["fresh"], id_key(it["id"])))
         return cands[:n] if len(cands) >= n else None
 
 

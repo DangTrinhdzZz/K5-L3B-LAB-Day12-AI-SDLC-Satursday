@@ -5,12 +5,14 @@ Mã thoát: 0 bình thường; 2 tham số/đầu vào sai (kiểm TRƯỚC khi 
 """
 
 import argparse
+import math
 import os
 import sys
 
 from .contract import load_contract
 from .errors import BadInput
 from .inputs import load_frames
+from . import leaderboard
 from .inventory import read_inventory
 from .runner import run
 from .scenario import load_scenario
@@ -44,11 +46,19 @@ def main(argv=None) -> int:
     p.add_argument("--inventory-out", dest="inventory_out")
     p.add_argument("--snapshot-every", dest="snapshot_every", type=_int("snapshot-every"), default=10)
     p.add_argument("--days", type=_int("days"))
+    p.add_argument("--leaderboard")  # mở rộng leaderboard: đi cặp với --player-name, chỉ mode day
+    p.add_argument("--player-name", dest="player_name")
     a = p.parse_args(argv)
     try:
         if a.days is not None and a.mode != "day":
             raise BadInput("--days chỉ dùng với --mode day")
         days = 1 if a.days is None else a.days
+        if (a.leaderboard is None) != (a.player_name is None):
+            raise BadInput("--leaderboard và --player-name phải đi cùng nhau")
+        if a.leaderboard is not None and a.mode != "day":
+            raise BadInput("--leaderboard chỉ dùng với --mode day")
+        if a.player_name is not None and not leaderboard.valid_name(a.player_name):
+            raise BadInput("--player-name phải là tên khác rỗng")
         if not 1 <= days <= 5:
             raise BadInput("--days phải là số nguyên từ 1 đến 5")
         if a.ticks < 0:
@@ -75,8 +85,12 @@ def main(argv=None) -> int:
         sys.stderr.write(f"đầu vào sai: {e}\n")
         return 2
     try:
-        run(a.mode, tuning, scenario, a.seed, frames, a.ticks, a.out, a.snapshot_every,
-            inventory=inventory, inventory_out=a.inventory_out, days=days)
+        sim = run(a.mode, tuning, scenario, a.seed, frames, a.ticks, a.out, a.snapshot_every,
+                  inventory=inventory, inventory_out=a.inventory_out, days=days)
+        # chỉ lượt chuẩn: đủ 5 Ngày, không scenario, kết thúc days_complete -> ghi đúng một mục (không đổi JSONL)
+        if a.leaderboard and days == leaderboard.STANDARD_DAYS and a.scenario is None and sim.reason == "days_complete":
+            score = sim.earned + tuning["score"]["reputation_multiplier"] * math.floor(sim.reputation)
+            leaderboard.add(a.leaderboard, a.player_name, score, sim.days_completed, a.seed)
     except BadInput as e:  # lỗi mức luật phát hiện lúc dựng sim
         sys.stderr.write(f"đầu vào sai: {e}\n")
         return 2

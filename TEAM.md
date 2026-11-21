@@ -10,7 +10,7 @@
 | … | … | `sim/gather` lát 2 (hái nút) | PO | lát 2 |
 | Nguyễn Văn Anh Trung | FPT-Trungocsdiogee | `sim/gather` lát 2 (bắt cá) + pause (`runner.Session`) | Dev | lát 1 |
 | … | … | `sim/quan` lát 3 (khách, kiên nhẫn) | Dev | lát 4 |
-| … | … | `sim/quan` lát 4 (bếp, phục vụ, tiền) + `client/ui` | Dev | lát 3 |
+| Vũ Tuấn Đạt | datkunal | `sim/day` Shop + độ tươi (`chonoi/freshness.py`: giữ chỗ tươi nhất) | Dev (pair với Tanh0406) | lát 3 |
 
 **Vai quy trình:** PO (đầu mối hỏi Anh Năm / giảng viên, giữ `docs/clarify.md`) · Integrator (giữ `docs/contracts/`, gắn tag) · QA lead (giữ bộ test, `docs/verification/`) · Scrum/Release (theo dõi mốc, standup).
 

@@ -53,6 +53,14 @@ class GatherFreshness(unittest.TestCase):
             self.assertEqual(last["hold_count"], 2)
             self.assertTrue(all(it["fresh"] < 30 for it in last["hold"]))
 
+    def test_spoiled_threshold_exact_30_spoils_at_tick_1(self):
+        # Ticket-03 mục 1: ươn khi fresh < 30; cá thể đúng 30 chưa ươn, tụt dưới 30 ở bước đầu -> spoiled tick 1
+        with Workdir() as w:
+            sc = {"gather": {"hold": items("ca_linh", fresh=30), "random_fish": False, "monsters": []}}
+            rows = run(w, "gather", sc, ticks=1)
+            self.assertEqual([(e["tick"], e["data"]) for e in events(rows, "spoiled")],
+                             [(1, {"item_id": "I1", "kind": "ca_linh", "location": "hold"})])
+    
     def test_old_count_hold_rejected(self):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {"gather": {"hold": ["ca_loc"]}})
@@ -108,6 +116,14 @@ class QuanFreshness(unittest.TestCase):
                        ticks=240, every=240)
             self.assertAlmostEqual(at(rows, 240)["stock"][0]["fresh"], 49.0, places=2)
 
+    def test_stock_spoils_when_dropping_below_30_at_tick_61(self):
+        # Kho quán -0.25/s: 30.25 về đúng 30 ở tick 60 (chưa ươn), xuống dưới 30 ở tick 61 -> spoiled
+        with Workdir() as w:
+            rows = run(w, "quan", {"quan": {"stock": items("ca_loc", fresh=30.25), "random_customers": False}},
+                       ticks=70, every=70)
+            self.assertEqual([(e["tick"], e["data"]) for e in events(rows, "spoiled")],
+                             [(61, {"item_id": "I1", "kind": "ca_loc", "location": "stock"})])
+
     def test_spoiled_items_not_cookable(self):
         with Workdir() as w:
             rows = run(w, "quan", {"quan": {"stock": items("ca_loc", "bong_sung", "bong_sung", fresh=10)}},
@@ -162,28 +178,14 @@ class QuanFreshness(unittest.TestCase):
             self.assertEqual(s["customers"][0]["reserved"], ["I1"])
             self.assertEqual(kinds_of(s["stock"]), ["ca_loc"])
 
-    def test_reserve_picks_freshest_not_lowest_id(self):
-        # Ticket-03 mục 1 "Giữ theo id": lấy cá thể khả dụng tươi nhất, hòa theo id (I2 fresh 90 > I1 fresh 50)
-        stock = [{"id": "I1", "kind": "ca_loc", "fresh": 50}, {"id": "I2", "kind": "ca_loc", "fresh": 90}]
+    def test_reserve_picks_freshest_item(self):
+        """Ticket-03: mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id; giá chốt theo cá thể đó."""
+        stock = items("ca_loc", fresh=50) + items("ca_loc", fresh=90, start=2) + items("ca_loc", fresh=90, start=3)
         with Workdir() as w:
-            rows = run(w, "quan", {"quan": {"stock": stock, "customers": [C1], "random_customers": False}}, ticks=0)
-            self.assertEqual(snapshots(rows)[0]["customers"][0]["reserved"], ["I2"])
-
-    def test_reserve_tie_on_fresh_breaks_by_id(self):
-        stock = [{"id": "I2", "kind": "ca_loc", "fresh": 90}, {"id": "I1", "kind": "ca_loc", "fresh": 90}]
-        with Workdir() as w:
-            rows = run(w, "quan", {"quan": {"stock": stock, "customers": [C1], "random_customers": False}}, ticks=0)
-            self.assertEqual(snapshots(rows)[0]["customers"][0]["reserved"], ["I1"])
-
-    def test_cook_price_locked_from_freshest_item(self):
-        # giá chốt theo cá thể tươi nhất: sau 1 tick fresh = 90 - 1/240 -> floor(60 × 0.89995…) = 53 (nếu lấy I1: 29)
-        stock = [{"id": "I1", "kind": "ca_loc", "fresh": 50}, {"id": "I2", "kind": "ca_loc", "fresh": 90}]
-        with Workdir() as w:
-            rows = run(w, "quan", {"quan": {"player": {"pos": [2, 7]}, "stock": stock, "customers": [C1],
-                                            "random_customers": False}}, [{"tick": 0, "interact": True}], ticks=2)
-            cs = events(rows, "cook_started")[0]["data"]
-            self.assertEqual(id_kind(cs["items"]), [("I2", "ca_loc")])
-            self.assertEqual(cs["base_price"], 53)
+            rows = run(w, "quan", {"quan": {"player": {"pos": [2, 7]}, "stock": stock, "customers": [dict(C1)],
+                                            "random_customers": False}}, [{"tick": 0, "interact": True}], ticks=1)
+            self.assertEqual(snapshots(rows)[0]["customers"][0]["reserved"], ["I2"], "tươi nhất, hòa theo id")
+            self.assertEqual(events(rows, "cook_started")[0]["data"]["base_price"], 53)  # floor(60 × (90 - 1/240) / 100)
 
 
 if __name__ == "__main__":

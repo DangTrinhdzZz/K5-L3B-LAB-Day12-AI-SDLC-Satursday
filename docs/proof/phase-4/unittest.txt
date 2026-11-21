@@ -1,0 +1,5 @@
+# máy đo: Windows 10, Python 3.13.1, commit b4a24f4
+$ PYTHONPATH=tests:. python3 -m unittest discover -s tests
+Ran 139 tests in 67.740s
+
+OK (skipped=1)

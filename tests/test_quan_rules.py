@@ -99,8 +99,41 @@ class Serve(unittest.TestCase):
                             inputs=[{"tick": 0, "interact": True}], ticks=3)
             self.assertEqual(events(rows, "served"), [])
 
+    def test_tip_when_patience_ratio_exactly_half(self):
+        # PRD-0 F: boa nếu tỷ lệ kiên nhẫn còn lại sau bước 1 ĐẠT tip_min_patience_ratio (>=)
+        with Workdir() as w:
+            b = self._served_block()
+            b["customers"][0]["patience_ticks_left"] = 1801  # sau bước 1 còn 1800/3600 = 0.5
+            rows = run_quan(w, b, inputs=[{"tick": 0, "interact": True}], ticks=2)
+            self.assertEqual(events(rows, "served")[0]["data"]["tip"], 12)
+
+    def test_tip_reputation_clamped_to_max(self):
+        # PRD-0 F: boa dương cộng tip_reputation khi thu tiền, kẹp uy tín theo tuning
+        eat = tuning()["quan"]["eat_s"] * 60
+        with Workdir() as w:
+            b = dict(self._served_block(), reputation=5)
+            rows = run_quan(w, b, inputs=[{"tick": 0, "interact": True}], ticks=eat + 5, every=100)
+            self.assertEqual(len(events(rows, "paid")), 1)
+            self.assertEqual(rows[-1]["reputation"], tuning()["quan"]["reputation_max"])
+
+    def test_money_and_earned_include_tip(self):
+        # PRD-0 E / Ticket-02: earned là tổng thu, gồm tiền món và boa
+        eat = tuning()["quan"]["eat_s"] * 60
+        with Workdir() as w:
+            rows = run_quan(w, self._served_block(), inputs=[{"tick": 0, "interact": True}], ticks=eat + 5, every=100)
+            paid = events(rows, "paid")[0]["data"]
+            self.assertEqual(paid["amount"], 72)
+            self.assertEqual((rows[-1]["money"], rows[-1]["earned"]), (72, 72))
+
 
 class Customers(unittest.TestCase):
+    def test_customer_arrives_at_first_tick(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": items("ca_loc", "ca_loc", "ca_loc")}, ticks=121, every=1)
+            arrived = events(rows, "customer_arrived")
+            self.assertEqual(len(arrived), 1)
+            self.assertEqual(arrived[0]["tick"], tuning()["quan"]["first_customer_tick"])
+
     def test_patience_runs_out(self):
         with Workdir() as w:
             rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
@@ -111,6 +144,23 @@ class Customers(unittest.TestCase):
             self.assertEqual(left[0]["data"]["reason"], "patience")
             self.assertAlmostEqual(by_tick(rows)[5]["reputation"], 2.5, places=2)
             self.assertEqual(by_tick(rows)[5]["customers"], [])
+
+    def test_customer_left_reports_updated_reputation(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
+                                "customers": [dict(C1, patience_ticks_left=5)]}, ticks=10)
+            left = events(rows, "customer_left")
+            self.assertEqual(left[0]["data"]["reputation"], 2.5)
+            self.assertEqual(by_tick(rows)[5]["reputation"], 2.5)
+
+    def test_closing_customer_does_not_lose_reputation(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
+                                "time_left_ticks": 3, "customers": [dict(C1)]}, ticks=10)
+            left = events(rows, "customer_left")
+            self.assertEqual(left[0]["data"]["reason"], "closing")
+            self.assertEqual(left[0]["data"]["reputation"], 3.0)
+            self.assertEqual(events(rows, "quan_end")[0]["data"]["reputation"], 3.0)
 
     def test_missing_reserved_is_filled_from_recipe(self):
         with Workdir() as w:

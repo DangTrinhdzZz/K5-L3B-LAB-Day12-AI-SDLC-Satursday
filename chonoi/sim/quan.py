@@ -292,7 +292,7 @@ class QuanSim:
             return
         base = self.hand["base_price"]
         ratio = c["patience_ticks_left"] / self.patience_full
-        tip = math.floor(base * self.t["tip_rate"]) if ratio > self.t["tip_min_patience_ratio"] else 0
+        tip = math.floor(base * self.t["tip_rate"]) if ratio >= self.t["tip_min_patience_ratio"] else 0
         c["state"], c["order_status"] = "eating", "served"
         c["eat_ticks_left"] = self.eat_full
         c["base_price"], c["tip"] = base, tip
@@ -303,11 +303,11 @@ class QuanSim:
     # --- khách rời bàn ------------------------------------------------------------
     def _pay(self, c, reason, events):
         amount = c["base_price"] + c["tip"]
-        self.money += c["base_price"]
-        self.earned += c["base_price"]
-        self.shift_earned += c["base_price"]
+        self.money += amount
+        self.earned += amount
+        self.shift_earned += amount
         if c["tip"] > 0:
-            self.reputation = round(self.reputation + self.t["tip_reputation"], REP_DIGITS)
+            self.reputation = self._clamp_rep(self.reputation + self.t["tip_reputation"])
         events.append(("paid", {"order_id": c["id"], "table_id": c["table_id"], "base_price": c["base_price"],
                                 "tip": c["tip"], "amount": amount, "reason": reason}))
         self.customers.remove(c)
@@ -319,16 +319,17 @@ class QuanSim:
                 s["state"], s["dish"], s["cook_ticks_left"], s["ready_ticks"] = "idle", None, 0, 0
         if self.hand and self.hand["order_id"] == c["id"]:
             self.hand = None
+        if reason != "closing":
+            self.reputation = self._clamp_rep(self.reputation + self.t["left_reputation_delta"])
         events.append(("customer_left", {"order_id": c["id"], "table_id": c["table_id"], "reason": reason,
                                          "reputation": self.reputation}))
-        self.reputation = self._clamp_rep(self.reputation + self.t["left_reputation_delta"])
         self.customers.remove(c)
 
     # --- khách mới ----------------------------------------------------------------
     def _is_customer_tick(self, pt) -> bool:
         first = self.t["first_customer_tick"]
         interval = _ticks(self.t["customer_interval_s"])
-        return pt > first and (pt - first) % interval == 0
+        return pt >= first and (pt - first) % interval == 0
 
     def _spawn_customer(self, events):
         busy = {c["table_id"] for c in self.customers}
@@ -336,7 +337,7 @@ class QuanSim:
         if not free:
             return
         table = min(free, key=lambda tb: id_key(tb["id"]))
-        options = [d for d in sorted(self.menu) if self._can_make(self.menu[d]["recipe"])]
+        options = [d for d in self.allowed_dishes if self._can_make(self.menu[d]["recipe"])]
         if not options:
             events.append(("no_dish", {}))
             return
