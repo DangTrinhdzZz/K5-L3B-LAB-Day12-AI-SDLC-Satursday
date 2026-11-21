@@ -1,0 +1,5 @@
+# máy đo: Windows 10, Python 3.13.1, commit f94ef1c
+$ python3 -m chonoi.bench --seed 42 --duration 30 --out bench.json
+exit=0
+{"avg_fps": 144.0, "p1_low_fps": 139.59, "frames": 4320, "measured_s": 30.0, "load_ms": 600}
+mốc báo cáo: avg >= 60 -> True; 1% low >= 30 -> True; load <= 10 s -> True

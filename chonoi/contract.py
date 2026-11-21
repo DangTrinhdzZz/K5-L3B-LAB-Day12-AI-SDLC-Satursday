@@ -1,4 +1,4 @@
-"""Đọc game.contract.json và kiểm dải hợp lệ của tuning (PRD-0 mục A, Ticket-02 mục 4.1 — contract v1.1)."""
+"""Đọc game.contract.json và kiểm dải hợp lệ của tuning (PRD-0 mục A, Ticket-02 mục 4.1, Ticket-03, Ticket-04 — contract v1.3)."""
 
 import json
 import os
@@ -24,8 +24,14 @@ def load_contract(path=DEFAULT_PATH) -> dict:
             c = json.load(f)
     except (OSError, ValueError) as e:
         raise BadInput(f"không đọc được {path}: {e}")
-    if c.get("contract_version") != "1.1":
-        raise BadInput("contract_version phải là \"1.1\"")
+    if c.get("contract_version") != "1.3":
+        raise BadInput("contract_version phải là \"1.3\"")
+    for key in ("headless_cmd", "run_cmd", "build_cmd", "bench_cmd", "soak_cmd"):
+        if not isinstance(c.get(key), str) or not c[key].strip():
+            raise BadInput(f"{key} phải là lệnh (chuỗi khác rỗng) ở gốc game.contract.json")
+    ext = c.get("extensions", [])
+    if not isinstance(ext, list) or not all(isinstance(e, str) and e for e in ext) or len(set(ext)) != len(ext):
+        raise BadInput("extensions phải là mảng mã mở rộng (chuỗi, không trùng)")
     validate_tuning(c.get("tuning"))
     return c
 
@@ -220,6 +226,16 @@ def _validate_day_shop(t):
                 raise BadInput(f"tuning.shop.upgrades.{up}[{lv['level']}] thiếu {fields[up]}")
 
 
+def _validate_freshness(f):
+    """tuning.freshness {initial, gather_decay_per_s, quan_decay_per_s, spoiled_below} (Ticket-03)."""
+    if not isinstance(f, dict) or set(f) != {"initial", "gather_decay_per_s", "quan_decay_per_s", "spoiled_below"}:
+        raise BadInput("tuning.freshness phải có đúng initial, gather_decay_per_s, quan_decay_per_s, spoiled_below")
+    _between("freshness.initial", f["initial"], 0, 100)
+    _between("freshness.spoiled_below", f["spoiled_below"], 0, 100)
+    _between("freshness.gather_decay_per_s", f["gather_decay_per_s"], 0, 100)
+    _between("freshness.quan_decay_per_s", f["quan_decay_per_s"], 0, 100)
+
+
 def validate_tuning(t):
     if not isinstance(t, dict):
         raise BadInput("thiếu khối tuning")
@@ -227,6 +243,7 @@ def validate_tuning(t):
     if not isinstance(g, dict) or not isinstance(q, dict) or not isinstance(menu, dict):
         raise BadInput("tuning phải có gather, quan, menu")
     _validate_gather(g)
+    _validate_freshness(t.get("freshness"))
     # Quán: dải hợp lệ P1 (PRD mục 13.2)
     _between("quan.duration_s", q.get("duration_s"), 60, 600)
     _bounds("quan", q.get("bounds"), ("x", "z"))

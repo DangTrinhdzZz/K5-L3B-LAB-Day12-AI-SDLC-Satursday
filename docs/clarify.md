@@ -13,3 +13,13 @@
 | 9 | 2026-11-21 P2 | `recoil_dist` là tổng hay mỗi bước? | Tổng 2 m chia đều 60 bước (2/60 m/bước) như đề ghi. | Integrator |
 | 10 | 2026-11-21 P2 | Lệnh `buy` là `weapon`/`net` khi chưa làm mở rộng? | `buy_failed` reason `unknown` (đề: "Shop phát buy_failed nếu gặp lệnh không hỗ trợ"). | Integrator |
 | 11 | 2026-11-21 P2 | DayIntro / EveningIntro / DayResult có phải pha headless? | Không; chỉ là màn của cửa sổ chơi, sim dừng bước trong lúc hiện màn (headless không đổi). | Integrator |
+| 12 | 2026-11-21 P3 | Lưu độ tươi thế nào để đúng ở ngưỡng 30 và phép floor? | Phân số (`fractions.Fraction`): giỏ −1/120, quán −1/240 điểm mỗi tick; ra ngoài đổi về số, file kho ghi đủ độ chính xác. | Integrator |
+| 13 | 2026-11-21 P3 | Cá thể fixture đã < 30 ngay lúc dựng có phát `spoiled` không? | Không (chỉ phát khi đi từ ≥ 30 xuống < 30 trong một bước hao). | Integrator |
+| 14 | 2026-11-21 P3 | Đơn reserved fixture bỏ trống `reserved` mà không đủ hàng tươi? | `unfulfillable`, phần giữ rỗng (giữ giả định #1 của Phase 1). | Integrator |
+| 15 | 2026-11-21 P3 | Thứ tự id trong `customers[].reserved` của snapshot? | Theo kind của công thức (sắp tên kind) rồi theo thứ tự chọn (tươi nhất trước). | Integrator |
+| 16 | 2026-11-21 P3 | Có hỗ trợ song song kho đếm v1.1 không? | Không: contract chỉ khai "1.2", file kho đếm trả mã 2 (ADR-0001). | Integrator |
+| 17 | 2026-11-21 P4 | Benchmark "có render" khi game chạy trong trình duyệt? | Đo trên chính trang canvas của game bằng Chrome/Chromium headless 1280×720 (requestAnimationFrame); cần trình duyệt trên máy chấm (CHONOI_BROWSER). | Integrator |
+| 18 | 2026-11-21 P4 | load_ms tính từ đâu? | Từ lúc tiến trình `chonoi.bench` khởi chạy tới khung hình đầu tiên có snapshot của cảnh đo. | Integrator |
+| 19 | 2026-11-21 P4 | Soak quá 5 Ngày dùng kế hoạch nào? Bot làm gì? | Kế hoạch D1–D5 lặp (Ngày 6 = D1); bot tất định chỉ đọc trạng thái sim, không ngẫu nhiên. | Integrator |
+| 20 | 2026-11-21 P4 | Mã extensions của phụ đề SFX? | Test Contract không cho mã → chỉ khai `leaderboard` trong extensions, phụ đề ghi ở README. | Integrator |
+| 21 | 2026-11-21 P4 | Store bảng xếp hạng mặc định? | `~/.chonoi/leaderboard.json` (hoặc `CHONOI_LEADERBOARD`); test luôn dùng store riêng. | Integrator |

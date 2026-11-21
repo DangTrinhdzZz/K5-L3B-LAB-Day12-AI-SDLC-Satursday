@@ -4,7 +4,7 @@ import json
 import time
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, id_kind, items, read_jsonl, run_headless, snapshots, write_json
 
 
 def tuning():
@@ -63,13 +63,13 @@ class DayFlow(unittest.TestCase):
 
     def test_scenario_example_docks_and_opens_quan_with_hold(self):
         sc = {"day": {"money": 200, "earned": 200},
-              "gather": {"hold": ["ca_loc", "bong_sung", "bong_sung"], "random_fish": False}}
+              "gather": {"hold": items("ca_loc", "bong_sung", "bong_sung"), "random_fish": False}}
         with Workdir() as w:
             rows = run_day(w, sc, inputs=[{"tick": 0, "interact": True}], ticks=3, every=1)
             self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "docked")
             s = [r for r in snapshots(rows) if r["tick"] == 1][0]
             self.assertEqual(s["phase"], "quan")
-            self.assertEqual(s["stock"], {"bong_sung": 2, "ca_loc": 1})
+            self.assertEqual(id_kind(s["stock"]), [("I1", "ca_loc"), ("I2", "bong_sung"), ("I3", "bong_sung")])
             self.assertEqual((s["money"], s["earned"]), (200, 200))
 
     def test_shop_done_closes_and_next_day_starts(self):
@@ -116,12 +116,12 @@ class DayFlow(unittest.TestCase):
             self.assertEqual(rows[-1]["money"], 100)
 
     def test_faint_still_opens_quan_with_empty_stock(self):
-        sc = {"gather": {"random_fish": False, "hold": ["ca_loc", "bong_sung"], "player": {"pos": [60, 23], "hp": 1}}}
+        sc = {"gather": {"random_fish": False, "hold": items("ca_loc", "bong_sung"), "player": {"pos": [60, 23], "hp": 1}}}
         with Workdir() as w:
             rows = run_day(w, sc, ticks=3, every=1)
             self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "fainted")
             s = [r for r in snapshots(rows) if r["phase"] == "quan"][0]
-            self.assertEqual(s["stock"], {})
+            self.assertEqual(s["stock"], [])
 
     def test_day_deterministic_bytes(self):
         with Workdir() as w:
@@ -148,10 +148,26 @@ class Pause(unittest.TestCase):
             self.assertEqual(s[15]["player"]["pos"], s[6]["player"]["pos"])
             self.assertEqual(rows[-1]["ticks"], 20)
 
+    def test_resumed_step_runs_gameplay(self):
+        # Ticket-02 4.2: cạnh lên tiếp theo phát resumed, chạy gameplay ngay trong bước đó.
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {"gather": {"random_fish": False}})
+            inp = write_json(w.path("in.json"), frames({"tick": 2, "pause": True}, {"tick": 3, "pause": False},
+                                                       {"tick": 4, "pause": True}))
+            code, err = run_headless("--mode", "gather", "--seed", "1", "--ticks", "6", "--scenario", sc, "--inputs", inp,
+                                     "--snapshot-every", "1", "--out", w.path("o.jsonl"))
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(w.path("o.jsonl"))
+            self.assertEqual([e["tick"] for e in events(rows, "resumed")], [5])
+            s = {r["tick"]: r for r in snapshots(rows)}
+            self.assertEqual((s[4]["state"], s[4]["sim_tick"]), ("paused", 2))
+            self.assertEqual((s[5]["state"], s[5]["sim_tick"], s[5]["phase_tick"]), ("playing", 3, 3))
+            self.assertEqual(rows[-1]["sim_tick"], 4)
+
 
 class DayInputErrors(unittest.TestCase):
     def test_bad_day_inputs_exit_2(self):
-        bad = [{"quan": {"stock": {"ca_loc": 1}}}, {"quan": {"reputation": 4}},
+        bad = [{"quan": {"stock": items("ca_loc")}}, {"quan": {"reputation": 4}},
                {"day": {"money": 300, "earned": 100}}, {"day": {"money": 50}},
                {"day": {"upgrades": {"hp": 3}}}, {"day": {"day_plan": [{"day": 1, "dishes": {"pho": 1}}]}},
                {"day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1}, "ingredients": {"ca_loc": 2}}]}},

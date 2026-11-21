@@ -1,0 +1,9 @@
+# máy đo: Windows 10, Python 3.13.1, commit f94ef1c
+$ python3 -m chonoi.soak --seed 7 --days 10 --out soak.json
+exit=0
+{"days": 10, "days_completed": 10, "crashes": 0, "duration_s": 5.023}
+$ python3 -m chonoi.soak --seed 7 --days 10 --out soak-lan2.json
+exit=0
+{"days": 10, "days_completed": 10, "crashes": 0, "duration_s": 5.0}
+đạt (days_completed == days và crashes == 0): True
+hai lần chạy giống nhau (bỏ duration_s): True

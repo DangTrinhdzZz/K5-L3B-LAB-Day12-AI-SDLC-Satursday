@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, id_kind, items, kinds_of, read_jsonl, run_headless, snapshots, write_json
 
 
 def tuning_gather():
@@ -98,22 +98,22 @@ class Faint(unittest.TestCase):
         # PRD E: faint.lost theo thứ tự bỏ, nhặt sau bỏ trước (LIFO)
         with Workdir() as w:
             rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
-                                  "hold": ["ca_loc", "bong_sung"], "random_fish": False}, ticks=100)
+                                  "hold": items("ca_loc", "bong_sung"), "random_fish": False}, ticks=100)
             ev = events(rows, "faint")
             self.assertEqual(len(ev), 1)
-            self.assertEqual(ev[0]["data"]["lost"], ["bong_sung", "ca_loc"])
+            self.assertEqual(id_kind(ev[0]["data"]["lost"]), [("I2", "bong_sung"), ("I1", "ca_loc")])
 
     def test_faint_empties_hold_and_inventory(self):
         # PRD F/G: Máu 0 thì bỏ giỏ; gather_end fainted với kho rỗng; file kho ghi rỗng
         with Workdir() as w:
             inv = w.path("kho.json")
             rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
-                                  "hold": ["ca_loc", "bong_sung"], "random_fish": False},
+                                  "hold": items("ca_loc", "bong_sung"), "random_fish": False},
                               ticks=100, inv_out=inv)
-            self.assertEqual(events(rows, "gather_end")[0]["data"]["inventory"], {"items": {}})
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["inventory"], {"items": []})
             self.assertEqual(snapshots(rows)[-1]["hold"], [])
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
 
 class Harvest(unittest.TestCase):
@@ -135,7 +135,7 @@ class Harvest(unittest.TestCase):
             self.assertEqual(ev[0]["tick"], 1)
             self.assertEqual(ev[0]["data"], {"node_id": "N2", "kind": "bong_sung", "amount": 1})
             s = by_tick(rows)[1]
-            self.assertEqual(s["hold"], ["bong_sung"])
+            self.assertEqual(kinds_of(s["hold"]), ["bong_sung"])
             n2 = [n for n in s["nodes"] if n["id"] == "N2"][0]
             self.assertFalse(n2["ready"])
 
@@ -150,7 +150,7 @@ class Harvest(unittest.TestCase):
     def test_hold_full_keeps_node(self):
         cap = tuning_gather()["hold_capacity"]
         with Workdir() as w:
-            rows = run_gather(w, {"player": {"pos": [20, 0]}, "hold": ["ca_loc"] * cap, "random_fish": False,
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "hold": items(*["ca_loc"] * cap), "random_fish": False,
                                   "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [21, 0]}]},
                               inputs=[{"tick": 0, "interact": True}], ticks=2)
             ev = events(rows, "hold_full")
@@ -178,7 +178,7 @@ class Catch(unittest.TestCase):
             self.assertEqual(len(ev), 1)
             self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": "ca_linh", "yield": g["fish_yield"]["ca_linh"]})
             s = by_tick(rows)[1]
-            self.assertEqual(s["hold"], ["ca_linh"] * g["fish_yield"]["ca_linh"])
+            self.assertEqual(kinds_of(s["hold"]), ["ca_linh"] * g["fish_yield"]["ca_linh"])
             self.assertEqual([f["id"] for f in s["fish"]], ["F2"])
             self.assertEqual(s["player"]["catch_cd_ticks"], int(g["catch_cooldown_s"] * 60))
 
@@ -200,7 +200,7 @@ class Catch(unittest.TestCase):
     def _full_hold_block(extra_fish=()):
         """Giỏ còn 1 chỗ trống, đàn cá linh (yield 3) gần nhất -> không đủ chỗ."""
         cap = tuning_gather()["hold_capacity"]
-        return {"player": {"pos": [20, 10]}, "hold": ["ca_loc"] * (cap - 1),
+        return {"player": {"pos": [20, 10]}, "hold": items(*["ca_loc"] * (cap - 1)),
                 "fish": [{"id": "F1", "kind": "ca_linh", "pos": [21, 10]}, *extra_fish]}
 
     def test_hold_full_on_catch_keeps_fish_and_no_cooldown(self):
@@ -246,7 +246,7 @@ class DockInventory(unittest.TestCase):
             self.assertEqual(end[0]["tick"], 1)
             self.assertEqual(end[0]["data"]["reason"], "docked")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
 class OxygenBugfixes(unittest.TestCase):
     """Người 1 — lỗi oxy/ngạt (PRD-0 mục F Gather, bước 2)."""
