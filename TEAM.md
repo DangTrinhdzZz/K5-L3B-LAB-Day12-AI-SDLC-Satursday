@@ -5,7 +5,7 @@
 | Thành viên | GitHub handle | Module chính | Vai quy trình | Người dự phòng cho |
 |---|---|---|---|---|
 | Trần Tuấn Anh | Tanh0406 | `sim/*` (khung luật gather + quan), `docs/contracts` | Integrator | mọi lát |
-| … | … | `sim/gather` lát 1 (oxy, ngạt) | QA lead | lát 2 |
+| Đào Vũ Minh Khánh | iamdvmk | `sim/gather` lát 1 (oxy, ngạt) | QA lead | lát 2 |
 | … | … | `sim/gather` lát 1 (Máu, ngất, giỏ) | Scrum/Release | lát 1 |
 | … | … | `sim/gather` lát 2 (hái nút) | PO | lát 2 |
 | … | … | `sim/gather` lát 2 (bắt cá) | Dev | lát 1 |
