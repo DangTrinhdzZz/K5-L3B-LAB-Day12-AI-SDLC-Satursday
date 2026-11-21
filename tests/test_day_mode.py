@@ -148,6 +148,22 @@ class Pause(unittest.TestCase):
             self.assertEqual(s[15]["player"]["pos"], s[6]["player"]["pos"])
             self.assertEqual(rows[-1]["ticks"], 20)
 
+    def test_resumed_step_runs_gameplay(self):
+        # Ticket-02 4.2: cạnh lên tiếp theo phát resumed, chạy gameplay ngay trong bước đó.
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {"gather": {"random_fish": False}})
+            inp = write_json(w.path("in.json"), frames({"tick": 2, "pause": True}, {"tick": 3, "pause": False},
+                                                       {"tick": 4, "pause": True}))
+            code, err = run_headless("--mode", "gather", "--seed", "1", "--ticks", "6", "--scenario", sc, "--inputs", inp,
+                                     "--snapshot-every", "1", "--out", w.path("o.jsonl"))
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(w.path("o.jsonl"))
+            self.assertEqual([e["tick"] for e in events(rows, "resumed")], [5])
+            s = {r["tick"]: r for r in snapshots(rows)}
+            self.assertEqual((s[4]["state"], s[4]["sim_tick"]), ("paused", 2))
+            self.assertEqual((s[5]["state"], s[5]["sim_tick"], s[5]["phase_tick"]), ("playing", 3, 3))
+            self.assertEqual(rows[-1]["sim_tick"], 4)
+
 
 class DayInputErrors(unittest.TestCase):
     def test_bad_day_inputs_exit_2(self):

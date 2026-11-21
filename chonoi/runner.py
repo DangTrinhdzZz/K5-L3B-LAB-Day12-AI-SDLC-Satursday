@@ -8,7 +8,7 @@ snapshot (nếu tới lượt hoặc buổi kết thúc) -> dòng 'end'. Mỗi t
   phase_tick : số bước gameplay trong pha hiện tại (về 0 khi đổi pha)
 
 Pause (Ticket-02 mục 4.2): xét cạnh `pause` trước. Bước vào pause chỉ tăng tick ngoài và phát `paused`; khi còn
-pause bỏ qua mọi hành động; cạnh lên tiếp theo phát `resumed`.
+pause bỏ qua mọi hành động; cạnh lên tiếp theo phát `resumed` rồi chạy gameplay ngay trong bước đó.
 
 `Session` là API bước tick dùng chung cho headless (`run`) và cửa sổ chơi trực tiếp (`chonoi.live`).
 """
@@ -86,9 +86,9 @@ class Session:
         if inp.pressed("pause"):
             self.paused = not self.paused
             rows.append(self._event("paused" if self.paused else "resumed", {}))
+        if self.paused:  # bước vào pause và các bước còn pause: chỉ tăng tick ngoài
             return rows
-        if self.paused:
-            return rows
+        # bước resumed rơi xuống đây: chạy gameplay ngay trong bước đó (Ticket-02 4.2)
         self.sim_tick += 1
         return rows + self._rows(self.sim.step(inp))
 
