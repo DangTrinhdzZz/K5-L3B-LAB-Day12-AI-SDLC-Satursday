@@ -1,0 +1,13 @@
+$ python3 -m chonoi.headless --mode day --seed 1 --days 1 --ticks 22200 --out day1.jsonl
+exit=0
+thời gian chạy: 0.78 s
+$ (event đổi pha / kế hoạch + dòng end)
+0 gather day_start {}
+0 gather day_plan {"dishes": {"ca_loc_nuong_trui": 3, "goi_bong_sung": 3}, "ingredients": {"bong_sung": 6, "ca_loc": 3}}
+0 gather phase_start {}
+10800 gather gather_end {"reason": "time", "inventory": {"items": {}}}
+10800 quan phase_start {}
+21600 quan quan_end {"reason": "time", "money": 0, "earned": 0, "shift_earned": 0, "reputation": 3.0}
+21600 shop phase_start {}
+22200 shop shop_end {"reason": "time"}
+{"type": "end", "ticks": 22200, "sim_tick": 22200, "mode": "day", "state": "finished", "reason": "days_complete", "money": 0, "earned": 0, "reputation": 3.0, "score": 300, "days_completed": 1}

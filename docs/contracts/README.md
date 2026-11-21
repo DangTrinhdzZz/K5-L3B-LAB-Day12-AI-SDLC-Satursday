@@ -51,3 +51,41 @@ Payload món (trên bếp `dish` và `hand`): `{"order_id", "dish_id", "base_pri
 | `quan_end` | `reason: "time", money, earned, shift_earned, reputation` | quan |
 
 Người nghe: runner ghi JSONL theo thứ tự xử lý; UI hiển thị 6 event cuối.
+
+---
+
+## 4. Thay đổi ở contract v1.1 (Phase 2, chốt lúc re-planning)
+
+**File kho:** schema giữ nguyên, thêm 2 kind `ca_keo`, `keo_neo` (tổng 6). Mode `day` bàn giao kho trong bộ nhớ;
+`--inventory` / `--inventory-out` chỉ dành cho hai mode độc lập.
+
+**CLI:** `--mode gather|quan|day`, `--days 1..5` (chỉ với day, mặc định 1).
+
+**Inputs:** nút mới `pause` (mọi mode), `shop_done` (Shop), `attack` / `photo` (mở rộng, chưa bật thì bỏ qua);
+`buy` là chuỗi khác rỗng, chỉ chạy ở frame khai báo (`oxygen`, `hp`; lệnh khác -> `buy_failed` reason `unknown`).
+
+**Pause:** xét cạnh `pause` trước; bước vào pause chỉ tăng `tick` và phát `paused`; khi còn pause, `sim_tick`,
+`phase_tick`, lịch và timer đứng yên; cạnh lên tiếp theo phát `resumed` rồi chạy gameplay ngay bước đó.
+
+**Snapshot thêm:** `state:"paused"`; gather: `monsters[]{id,kind,pos,waypoints,target_idx,state,state_ticks_left,recoil_dir}`,
+`fish[].age_ticks`; mode day (mọi pha): `day`, `day_plan{dishes,ingredients}`, `upgrades` (đã mua), `active_upgrades`
+(đang áp dụng); pha `shop`: `stock` dư từ ca + `time_left_ticks` tới lúc đóng. Snapshot đổi pha ghi pha mới, `phase_tick:0`.
+
+**Event thêm** (vỏ event của mode day có thêm `day`; event kết thúc mang pha cũ, `phase_start` mang pha mới):
+
+| Tên | `data` | Ai phát |
+|---|---|---|
+| `monster_hit` | `monster_id, hp, lost` (LIFO), `pos` người chơi | gather (`sim/monsters.py`) |
+| `fish_spawned` | `id, kind, pos` | gather (`sim/fish.py`) |
+| `faint` | thêm `cause:"monster"` | gather |
+| `day_start` / `phase_start` | `{}` | day |
+| `day_plan` | `dishes, ingredients` | day |
+| `paused` / `resumed` | `{}` | runner (Session) |
+| `bought` | `upgrade, level, price, money` | day (Shop) |
+| `buy_failed` | `action, reason` (`funds`/`max_level`/`unknown`) | day (Shop) |
+| `shop_end` | `reason` (`done`/`time`) | day (Shop) |
+
+Dòng `end` của day thêm `days_completed`; đủ Ngày thì `reason:"days_complete"`.
+
+**Giao diện sim <-> UI (thêm):** `GET /state` có `ui{screen, intro, stats, totals, menu, shop, days}`; `POST /input` nhận
+thêm `pause`, `shop_done`, `buy`; `POST /start | /menu | /quit | /skip` điều hướng menu / màn giới thiệu (không đi vào sim).

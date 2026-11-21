@@ -1,0 +1,5 @@
+$ PYTHONPATH=tests:. python3 -m unittest discover -s tests
+----------------------------------------------------------------------
+Ran 86 tests in 27.326s
+
+OK

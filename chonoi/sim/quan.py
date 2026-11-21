@@ -13,6 +13,8 @@ Thứ tự một bước theo PRD-0 mục F "Quán":
      chọn đều theo seed trong các món đủ nguyên liệu khả dụng (tồn - giữ), không có -> no_dish.
 
 Lát 3: khách, giữ chỗ nguyên liệu, kiên nhẫn. Lát 4: bếp, bưng, phục vụ, tiền, uy tín.
+Phase 2 (v1.1): 2 bếp / 4 bàn / 6 món theo dữ liệu. Trong mode day, khách chỉ gọi món thuộc kế hoạch Ngày
+(`plan_dishes`), tiền / earned / uy tín nối tiếp từ Ngày trước; quán độc lập dùng cả 6 món.
 """
 
 import math
@@ -41,7 +43,8 @@ class QuanSim:
     mode = "quan"
     phase = "quan"
 
-    def __init__(self, tuning, scenario, streams, ids, inventory=None):
+    def __init__(self, tuning, scenario, streams, ids, inventory=None, plan_dishes=None, money=0, earned=0,
+                 reputation=None):
         t = tuning["quan"]
         self.t = t
         self.menu = tuning["menu"]
@@ -56,7 +59,10 @@ class QuanSim:
         self.stock = dict(inventory if inventory is not None else scenario.get("stock", {}))
         self.hand = dict(scenario["hand"]) if scenario.get("hand") else None
         self.time_left_ticks = scenario.get("time_left_ticks", _ticks(t["duration_s"]))
-        self.reputation = float(scenario.get("reputation", t["reputation_initial"]))
+        rep0 = reputation if reputation is not None else t["reputation_initial"]
+        self.reputation = float(scenario.get("reputation", rep0))
+        # menu khách được gọi: kế hoạch Ngày (mode day) hoặc cả menu (quán độc lập), theo id món
+        self.allowed_dishes = sorted(plan_dishes) if plan_dishes else sorted(self.menu)
         self.random_customers = scenario.get("random_customers", True)
         self.phase_tick = 0
         self.patience_full = _ticks(t["patience_s"])
@@ -71,9 +77,12 @@ class QuanSim:
         over = {k: n for k, n in self._reserved_total().items() if n > self.stock.get(k, 0)}
         if over:
             raise BadInput(f"khách giữ chỗ quá tồn kho: {over}")
+        off_plan = [c["id"] for c in self.customers if c["dish_id"] not in self.allowed_dishes]
+        if off_plan:
+            raise BadInput(f"khách gọi món ngoài kế hoạch Ngày: {off_plan}")
         self._fill_missing_reservations(scenario.get("customers", []))
-        self.money = 0
-        self.earned = 0
+        self.money = money
+        self.earned = earned
         self.shift_earned = 0
         self.done = False
         self.reason = None
