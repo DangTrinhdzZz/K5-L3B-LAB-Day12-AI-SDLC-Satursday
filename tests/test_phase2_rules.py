@@ -79,6 +79,14 @@ class FishSwim(unittest.TestCase):
             self.assertLessEqual(f["pos"][1], 12)
             self.assertAlmostEqual(f["heading_deg"], 270, places=3)
 
+    def test_reflect_at_x_edge_flips_x_heading(self):
+        # Chạm mép x: phản xạ quãng còn lại và đảo thành phần hướng x (vuông góc với mép)
+        with Workdir() as w:
+            block = dict(NO_MONSTERS, **NO_NODES)
+            block["fish"] = [{"id": "F1", "kind": "ca_loc", "pos": [95.99, 14]}]
+            rows = run(w, "gather", block, ticks=3)
+            self.assertEqual(by_tick(rows)[3]["fish"][0]["heading_deg"], 180)
+
     def test_turn_on_swim_step_120(self):
         with Workdir() as w:
             block = dict(NO_NODES, **NO_MONSTERS, fish=[{"id": "F1", "kind": "ca_loc", "pos": [50, 14]}])
