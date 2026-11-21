@@ -122,7 +122,8 @@ class GatherSim:
             if self._in_dock():
                 self._finish("docked", events)
                 return events
-            self._harvest(events)
+            if self._at_surface():
+                self._harvest(events)
         # 4. bắt cá
         if inp.pressed("catch") and self.catch_cd_ticks == 0 and not self._at_surface():
             self._catch(events)
