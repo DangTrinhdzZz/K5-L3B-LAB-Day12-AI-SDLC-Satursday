@@ -160,6 +160,28 @@ class DockInventory(unittest.TestCase):
             with open(inv, encoding="utf-8") as f:
                 self.assertEqual(json.load(f), {"items": {}})
 
+class OxygenBugfixes(unittest.TestCase):
+    """Người 1 — lỗi oxy/ngạt (PRD-0 mục F Gather, bước 2)."""
 
+    def test_surfacing_resets_choke_counter(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"random_fish": False,
+                                  "player": {"pos": [50, 0.6], "oxygen_ticks": 0, "zero_oxy_ticks": 30}},
+                              inputs=[{"tick": 0, "move": [0, -1]}], ticks=30)
+            self.assertEqual(by_tick(rows)[30]["player"]["zero_oxy_ticks"], 0)
+
+    def test_first_choke_at_t_plus_59(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"random_fish": False, "player": {"pos": [50, 10], "oxygen_ticks": 1}}, ticks=100)
+            self.assertEqual(events(rows, "oxygen_empty")[0]["tick"], 1)
+            self.assertEqual(events(rows, "choke")[0]["tick"], 60)
+
+    def test_dive_from_exact_surface_boundary(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"random_fish": False, "player": {"pos": [50, 0.5]}},
+                              inputs=[{"tick": 0, "move": [0, 1]}], ticks=10)
+            self.assertEqual(len(events(rows, "dive")), 1)
+            
+                
 if __name__ == "__main__":
     unittest.main()

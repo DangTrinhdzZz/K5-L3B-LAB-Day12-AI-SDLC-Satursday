@@ -117,9 +117,9 @@ class GatherSim:
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
         # 2. bơi + chặn mép, so phân vùng đầu/cuối bước -> dive / surface
-        was_surface = self.pos[1] < self.t["surface_depth"]
+        was_surface = self._at_surface()
         self._move(inp)
-        now_surface = self.pos[1] < self.t["surface_depth"]
+        now_surface = self._at_surface()
         if was_surface and not now_surface:
             events.append(("dive", {"pos": list(self.pos)}))
         elif now_surface and not was_surface:
@@ -161,12 +161,13 @@ class GatherSim:
         """Cập nhật oxy / ngạt / Máu sau khi bơi. Trả True nếu vừa ngất (buổi sáng kết thúc)."""
         if self._at_surface():
             self.oxygen_ticks = min(self.oxygen_max, self.oxygen_ticks + self.t["oxygen_refill_per_tick"])
+            self.zero_oxy_ticks = 0  # mặt nước: hồi oxy và reset ngạt
             return False
         prev = self.oxygen_ticks
         self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
         if prev > 0 and self.oxygen_ticks == 0:
             events.append(("oxygen_empty", {"oxygen_ticks": 0}))
-        if prev == 0:
+        if self.oxygen_ticks == 0:  # kể cả bước vừa chạm 0
             self.zero_oxy_ticks += 1
             if self.zero_oxy_ticks >= self.t["choke_interval_ticks"]:
                 self.zero_oxy_ticks = 0
