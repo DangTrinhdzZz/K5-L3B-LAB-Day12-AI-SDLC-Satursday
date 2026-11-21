@@ -182,7 +182,7 @@ class GatherSim:
                                          "required": amount, "free": self._free()}))
             return
         self.hold.extend([node["kind"]] * amount)
-        node["regrow_ticks"] = int(round(self.t["regrow_s"]))
+        node["regrow_ticks"] = int(round(self.t["regrow_s"] * TICK))
         events.append(("gather", {"node_id": node["id"], "kind": node["kind"], "amount": amount}))
 
     def _catch(self, events):
