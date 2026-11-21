@@ -307,7 +307,7 @@ class QuanSim:
         self.earned += c["base_price"]
         self.shift_earned += c["base_price"]
         if c["tip"] > 0:
-            self.reputation = round(self.reputation + self.t["tip_reputation"], REP_DIGITS)
+            self.reputation = self._clamp_rep(self.reputation + self.t["tip_reputation"])
         events.append(("paid", {"order_id": c["id"], "table_id": c["table_id"], "base_price": c["base_price"],
                                 "tip": c["tip"], "amount": amount, "reason": reason}))
         self.customers.remove(c)

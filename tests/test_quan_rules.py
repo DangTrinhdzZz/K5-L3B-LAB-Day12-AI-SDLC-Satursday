@@ -107,6 +107,15 @@ class Serve(unittest.TestCase):
             rows = run_quan(w, b, inputs=[{"tick": 0, "interact": True}], ticks=2)
             self.assertEqual(events(rows, "served")[0]["data"]["tip"], 12)
 
+    def test_tip_reputation_clamped_to_max(self):
+        # PRD-0 F: boa dương cộng tip_reputation khi thu tiền, kẹp uy tín theo tuning
+        eat = tuning()["quan"]["eat_s"] * 60
+        with Workdir() as w:
+            b = dict(self._served_block(), reputation=5)
+            rows = run_quan(w, b, inputs=[{"tick": 0, "interact": True}], ticks=eat + 5, every=100)
+            self.assertEqual(len(events(rows, "paid")), 1)
+            self.assertEqual(rows[-1]["reputation"], tuning()["quan"]["reputation_max"])
+
 
 class Customers(unittest.TestCase):
     def test_customer_arrives_at_first_tick(self):
