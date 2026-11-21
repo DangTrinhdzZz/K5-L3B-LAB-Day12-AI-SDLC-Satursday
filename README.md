@@ -3,6 +3,11 @@
 > Day 12 · AI SDLC · K5-L3B. Út Sen lặn bắt cá, hái bông trên sông Chín Khúc buổi sáng, tối mở quán trên nhà bè của Má Tư, cuối ngày mua nâng cấp cho lần lặn sau.
 > Đề bài và lịch phase: **[Chợ Nổi Lab](https://claude.ai/artifact/E35v787wSx2wDgPTNhMVDg)** · Thành viên và vai: [`TEAM.md`](TEAM.md) · Test Contract **v1.3** · bản phát hành mới nhất **v1.0.2** ([release notes](docs/release-notes-v1.0.2.md); trước đó [v1.0.1](docs/release-notes-v1.0.1.md), [v1.0.0](docs/release-notes-v1.0.0.md)).
 
+## Video demo
+
+▶ **[Xem video demo trên Google Drive](https://drive.google.com/file/d/1kCB9NfQat3pI08r4TH-Ykl1JkmjxsZp_/view?usp=sharing)**
+(`video_demo_game_lab12.mp4`, bản v1.0.2, người quay: Vũ Tuấn Đạt (datkunal)).
+
 ## Yêu cầu môi trường
 
 - Python **3.10+** (chỉ thư viện chuẩn, không `pip install`), macOS hoặc Linux (Windows cũng chạy được).
