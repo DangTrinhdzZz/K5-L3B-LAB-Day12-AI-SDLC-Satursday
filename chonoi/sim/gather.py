@@ -152,7 +152,7 @@ class GatherSim:
                 self.hp -= 1
                 if self.hp <= 0:
                     self.hp = 0
-                    lost = list(self.hold)
+                    lost = self.hold[::-1]  # LIFO: nhặt sau bỏ trước
                     events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
                     self._finish("fainted", events)
                     return True

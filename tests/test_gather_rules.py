@@ -85,6 +85,15 @@ class Faint(unittest.TestCase):
             self.assertEqual(rows[-1]["reason"], "fainted")
             self.assertEqual(snapshots(rows)[-1]["state"], "finished")
 
+    def test_faint_lost_is_lifo(self):
+        # PRD E: faint.lost theo thứ tự bỏ, nhặt sau bỏ trước (LIFO)
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
+                                  "hold": ["ca_loc", "bong_sung"], "random_fish": False}, ticks=100)
+            ev = events(rows, "faint")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["data"]["lost"], ["bong_sung", "ca_loc"])
+
 
 class Harvest(unittest.TestCase):
     def test_gather_nearest_ready_node_at_surface(self):
