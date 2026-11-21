@@ -178,6 +178,15 @@ class QuanFreshness(unittest.TestCase):
             self.assertEqual(s["customers"][0]["reserved"], ["I1"])
             self.assertEqual(kinds_of(s["stock"]), ["ca_loc"])
 
+    def test_reserve_picks_freshest_item(self):
+        """Ticket-03: mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id; giá chốt theo cá thể đó."""
+        stock = items("ca_loc", fresh=50) + items("ca_loc", fresh=90, start=2) + items("ca_loc", fresh=90, start=3)
+        with Workdir() as w:
+            rows = run(w, "quan", {"quan": {"player": {"pos": [2, 7]}, "stock": stock, "customers": [dict(C1)],
+                                            "random_customers": False}}, [{"tick": 0, "interact": True}], ticks=1)
+            self.assertEqual(snapshots(rows)[0]["customers"][0]["reserved"], ["I2"], "tươi nhất, hòa theo id")
+            self.assertEqual(events(rows, "cook_started")[0]["data"]["base_price"], 53)  # floor(60 × (90 - 1/240) / 100)
+
 
 if __name__ == "__main__":
     unittest.main()
