@@ -166,6 +166,42 @@ class Catch(unittest.TestCase):
             self.assertEqual([r for r in rows if r["type"] == "event"], [])
             self.assertEqual(by_tick(rows)[2]["player"]["catch_cd_ticks"], 0)
 
+    @staticmethod
+    def _full_hold_block(extra_fish=()):
+        """Giỏ còn 1 chỗ trống, đàn cá linh (yield 3) gần nhất -> không đủ chỗ."""
+        cap = tuning_gather()["hold_capacity"]
+        return {"player": {"pos": [20, 10]}, "hold": ["ca_loc"] * (cap - 1),
+                "fish": [{"id": "F1", "kind": "ca_linh", "pos": [21, 10]}, *extra_fish]}
+
+    def test_hold_full_on_catch_keeps_fish_and_no_cooldown(self):
+        with Workdir() as w:
+            rows = run_gather(w, self._full_hold_block(), inputs=[{"tick": 0, "catch": True}], ticks=2)
+            self.assertEqual(len(events(rows, "hold_full")), 1)
+            s = by_tick(rows)[1]
+            self.assertEqual(s["player"]["catch_cd_ticks"], 0)
+            self.assertEqual([f["id"] for f in s["fish"]], ["F1"])
+
+    def test_hold_full_does_not_try_other_fish(self):
+        # F2 (cá lóc, yield 1) vừa đủ chỗ nhưng không phải đàn gần nhất -> không bắt
+        f2 = {"id": "F2", "kind": "ca_loc", "pos": [21.5, 10]}
+        with Workdir() as w:
+            rows = run_gather(w, self._full_hold_block([f2]), inputs=[{"tick": 0, "catch": True}], ticks=2)
+            self.assertEqual(events(rows, "fish_caught"), [])
+            self.assertEqual(len(events(rows, "hold_full")), 1)
+            s = by_tick(rows)[1]
+            self.assertEqual([f["id"] for f in s["fish"]], ["F1", "F2"])
+            self.assertEqual(len(s["hold"]), tuning_gather()["hold_capacity"] - 1)
+
+    def test_hold_full_on_catch_uses_fish_id(self):
+        # Lỗi 12: hold_full khi bắt cá phải ghi khóa fish_id, không phải node_id
+        g = tuning_gather()
+        with Workdir() as w:
+            rows = run_gather(w, self._full_hold_block(), inputs=[{"tick": 0, "catch": True}], ticks=2)
+            ev = events(rows, "hold_full")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["data"], {"action": "catch", "fish_id": "F1",
+                                             "required": g["fish_yield"]["ca_linh"], "free": 1})
+
 
 class DockInventory(unittest.TestCase):
     def test_dock_checked_before_harvest(self):
