@@ -170,6 +170,15 @@ class Catch(unittest.TestCase):
             self.assertEqual([f["id"] for f in s["fish"]], ["F1", "F2"])
             self.assertEqual(len(s["hold"]), tuning_gather()["hold_capacity"] - 1)
 
+    def test_hold_full_on_catch_uses_fish_id(self):
+        g = tuning_gather()
+        with Workdir() as w:
+            rows = run_gather(w, self._full_hold_block(), inputs=[{"tick": 0, "catch": True}], ticks=2)
+            ev = events(rows, "hold_full")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["data"], {"action": "catch", "fish_id": "F1",
+                                             "required": g["fish_yield"]["ca_linh"], "free": 1})
+
 
 class DockInventory(unittest.TestCase):
     def test_dock_checked_before_harvest(self):

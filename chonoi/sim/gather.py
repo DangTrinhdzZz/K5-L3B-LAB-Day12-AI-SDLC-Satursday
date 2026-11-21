@@ -196,7 +196,7 @@ class GatherSim:
         y = self.t["fish_yield"][fish["kind"]]
         if self._free() < y:
             # Thiếu chỗ: giữ đàn, KHÔNG đặt hồi chiêu, không thử đàn khác (PRD-0 mục F "Gather").
-            events.append(("hold_full", {"action": "catch", "node_id": fish["id"],
+            events.append(("hold_full", {"action": "catch", "fish_id": fish["id"],
                                          "required": y, "free": self._free()}))
             return
         self.hold.extend([fish["kind"]] * y)
