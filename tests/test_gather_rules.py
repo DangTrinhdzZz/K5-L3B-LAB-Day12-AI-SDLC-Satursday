@@ -171,6 +171,7 @@ class Catch(unittest.TestCase):
             self.assertEqual(len(s["hold"]), tuning_gather()["hold_capacity"] - 1)
 
     def test_hold_full_on_catch_uses_fish_id(self):
+        # Lỗi 12: hold_full khi bắt cá phải ghi khóa fish_id, không phải node_id
         g = tuning_gather()
         with Workdir() as w:
             rows = run_gather(w, self._full_hold_block(), inputs=[{"tick": 0, "catch": True}], ticks=2)
