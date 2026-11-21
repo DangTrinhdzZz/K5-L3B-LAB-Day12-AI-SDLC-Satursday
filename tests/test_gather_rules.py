@@ -176,6 +176,12 @@ class OxygenBugfixes(unittest.TestCase):
             self.assertEqual(events(rows, "oxygen_empty")[0]["tick"], 1)
             self.assertEqual(events(rows, "choke")[0]["tick"], 60)
 
+    def test_dive_from_exact_surface_boundary(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"random_fish": False, "player": {"pos": [50, 0.5]}},
+                              inputs=[{"tick": 0, "move": [0, 1]}], ticks=10)
+            self.assertEqual(len(events(rows, "dive")), 1)
             
+                
 if __name__ == "__main__":
     unittest.main()

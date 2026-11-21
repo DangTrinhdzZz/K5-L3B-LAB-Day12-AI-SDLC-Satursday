@@ -107,9 +107,9 @@ class GatherSim:
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
         # 2. bơi + chặn mép, so phân vùng đầu/cuối bước -> dive / surface
-        was_surface = self.pos[1] < self.t["surface_depth"]
+        was_surface = self._at_surface()
         self._move(inp)
-        now_surface = self.pos[1] < self.t["surface_depth"]
+        now_surface = self._at_surface()
         if was_surface and not now_surface:
             events.append(("dive", {"pos": list(self.pos)}))
         elif now_surface and not was_surface:
