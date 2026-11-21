@@ -102,6 +102,14 @@ class Harvest(unittest.TestCase):
             n2 = [n for n in s["nodes"] if n["id"] == "N2"][0]
             self.assertFalse(n2["ready"])
 
+    def test_node_regrows_after_seconds(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [21, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=1300)
+        self.assertEqual([(event["tick"], event["data"]) for event in events(rows, "node_regrown")],
+                         [(1201, {"node_id": "N1"})])
+
     def test_hold_full_keeps_node(self):
         cap = tuning_gather()["hold_capacity"]
         with Workdir() as w:
