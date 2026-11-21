@@ -11,7 +11,7 @@ import math
 
 from .contract import validate_plan_entry
 from .errors import BadInput
-from .inventory import FISH_KINDS, KINDS_P1, NODE_KINDS, validate_items
+from .inventory import FISH_KINDS, NODE_KINDS, validate_item_list
 
 GATHER_KEYS = {"player", "hold", "nodes", "fish", "random_fish", "time_left_ticks", "monsters"}
 GATHER_PLAYER_KEYS = {"pos", "vel", "heading_deg", "hp", "oxygen_ticks", "zero_oxy_ticks",
@@ -146,9 +146,7 @@ def _validate_gather(b, tuning, day_mode=False):
     if "random_fish" in b and not isinstance(b["random_fish"], bool):
         raise BadInput("random_fish phải là boolean")
     if "hold" in b:
-        h = b["hold"]
-        if not isinstance(h, list) or any(k not in KINDS_P1 for k in h):
-            raise BadInput("hold phải là mảng id nguyên liệu hợp lệ")
+        h = validate_item_list(b["hold"], "gather.hold")  # v1.2: mảng cá thể {id, kind, fresh}
         if len(h) > g["hold_capacity"]:
             raise BadInput("hold vượt sức chứa")
     p = b.get("player", {})
@@ -320,17 +318,14 @@ def _validate_customer(c, q, menu, known_tables):
     eat = c.get("eat_ticks_left", 0)
     if c.get("patience_ticks_left", full_pat) > full_pat or eat > full_eat:
         raise BadInput(f"customers.{cid}: kiên nhẫn / timer ăn vượt mức đầy")
-    res = c.get("reserved", {})
-    if not isinstance(res, dict):
-        raise BadInput(f"customers.{cid}.reserved phải là object")
-    for k, n in res.items():
-        if k not in KINDS_P1 or isinstance(n, bool) or not isinstance(n, int) or n <= 0:
-            raise BadInput(f"customers.{cid}.reserved: {k} không hợp lệ")
+    res = c.get("reserved", [])
+    if not isinstance(res, list) or not all(isinstance(i, str) and i for i in res) or len(set(res)) != len(res):
+        raise BadInput(f"customers.{cid}.reserved phải là mảng id cá thể (chuỗi, không trùng)")
     if c.get("base_price") is not None:
         _pos_int(f"customers.{cid}.base_price", c["base_price"])
     if c.get("tip") is not None:
         _nonneg_int(f"customers.{cid}.tip", c["tip"])
-    if status == "reserved" and "reserved" in c and res != menu[c["dish_id"]]["recipe"]:
+    if status == "reserved" and "reserved" in c and len(res) != sum(menu[c["dish_id"]]["recipe"].values()):
         raise BadInput(f"customers.{cid}: giữ chỗ khác công thức món")
     if status != "reserved" and res:
         raise BadInput(f"customers.{cid}: đơn {status} không còn giữ chỗ")
@@ -349,7 +344,7 @@ def _validate_quan(b, tuning):
         if arr in b:
             _check_ids(arr, b[arr])
     if "stock" in b:
-        validate_items(b["stock"])
+        validate_item_list(b["stock"], "quan.stock")  # v1.2: mảng cá thể; phần giữ kiểm lúc dựng QuanSim
     if "random_customers" in b and not isinstance(b["random_customers"], bool):
         raise BadInput("random_customers phải là boolean")
     if "reputation" in b:
