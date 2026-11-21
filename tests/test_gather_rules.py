@@ -73,6 +73,15 @@ class Oxygen(unittest.TestCase):
 
 
 class Faint(unittest.TestCase):
+    def test_choke_reports_hp_after_damage(self):
+        # PRD E: choke ghi hp sau khi trừ (hp_max 3 -> choke đầu tiên ghi 2)
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0},
+                                  "random_fish": False}, ticks=100)
+            ev = events(rows, "choke")
+            self.assertEqual(ev[0]["data"], {"hp": tuning_gather()["hp_max"] - 1})
+            self.assertEqual(by_tick(rows)[ev[0]["tick"]]["player"]["hp"], ev[0]["data"]["hp"])
+
     def test_faint_ends_gather_with_reason_fainted(self):
         with Workdir() as w:
             rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
@@ -84,6 +93,27 @@ class Faint(unittest.TestCase):
             self.assertEqual(rows[-1]["type"], "end")
             self.assertEqual(rows[-1]["reason"], "fainted")
             self.assertEqual(snapshots(rows)[-1]["state"], "finished")
+
+    def test_faint_lost_is_lifo(self):
+        # PRD E: faint.lost theo thứ tự bỏ, nhặt sau bỏ trước (LIFO)
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
+                                  "hold": ["ca_loc", "bong_sung"], "random_fish": False}, ticks=100)
+            ev = events(rows, "faint")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["data"]["lost"], ["bong_sung", "ca_loc"])
+
+    def test_faint_empties_hold_and_inventory(self):
+        # PRD F/G: Máu 0 thì bỏ giỏ; gather_end fainted với kho rỗng; file kho ghi rỗng
+        with Workdir() as w:
+            inv = w.path("kho.json")
+            rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
+                                  "hold": ["ca_loc", "bong_sung"], "random_fish": False},
+                              ticks=100, inv_out=inv)
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["inventory"], {"items": {}})
+            self.assertEqual(snapshots(rows)[-1]["hold"], [])
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {}})
 
 
 class Harvest(unittest.TestCase):

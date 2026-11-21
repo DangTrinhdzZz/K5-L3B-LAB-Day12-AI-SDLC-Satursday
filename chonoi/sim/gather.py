@@ -172,11 +172,11 @@ class GatherSim:
             self.zero_oxy_ticks += 1
             if self.zero_oxy_ticks >= self.t["choke_interval_ticks"]:
                 self.zero_oxy_ticks = 0
-                events.append(("choke", {"hp": self.hp}))
-                self.hp -= 1
-                if self.hp <= 0:
-                    self.hp = 0
-                    lost = list(self.hold)
+                self.hp = max(0, self.hp - 1)
+                events.append(("choke", {"hp": self.hp}))  # hp sau khi trừ
+                if self.hp == 0:
+                    lost = self.hold[::-1]  # LIFO: nhặt sau bỏ trước
+                    self.hold = []  # ngất: mất toàn bộ giỏ, gather_end và file kho đều rỗng
                     events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
                     self._finish("fainted", events)
                     return True
