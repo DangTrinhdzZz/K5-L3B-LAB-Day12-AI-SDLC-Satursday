@@ -13,7 +13,7 @@ BAD = {
     "món ngoài menu": {"customers": [dict(C1, dish_id="pho_bo")]},
     "trường lạ ở khách": {"customers": [dict(C1, mood="vui")]},
     "id bếp không tồn tại": {"stoves": [{"id": "B9", "state": "idle"}]},
-    "id bàn không tồn tại": {"tables": [{"id": "T2", "pos": [1, 1]}]},
+    "id bàn không tồn tại": {"tables": [{"id": "T9", "pos": [1, 1]}]},
     "giữ khác công thức": {"stock": {"ca_loc": 2}, "customers": [dict(C1, reserved={"ca_loc": 2})]},
     "giữ quá tồn": {"stock": {}, "customers": [dict(C1, reserved={"ca_loc": 1})]},
     "assigned không có món": {"customers": [ASSIGNED]},
@@ -29,7 +29,7 @@ BAD = {
     "kiên nhẫn vượt đầy": {"customers": [dict(C1, patience_ticks_left=99999)], "stock": {"ca_loc": 1}},
     "uy tín ngoài dải": {"reputation": 7},
     "random_customers sai kiểu": {"random_customers": "no"},
-    "nguyên liệu lạ trong kho": {"stock": {"ca_keo": 1}},
+    "nguyên liệu lạ trong kho": {"stock": {"ca_la_lung": 1}},
 }
 
 
