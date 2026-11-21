@@ -115,6 +115,13 @@ class Harvest(unittest.TestCase):
             self.assertEqual(events(rows, "gather"), [])
 
 
+    def test_gather_ignored_underwater(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 1.5]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [20, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=2)
+        self.assertEqual(events(rows, "gather"), [])
+
 class Catch(unittest.TestCase):
     def test_catch_nearest_fish_underwater(self):
         g = tuning_gather()
