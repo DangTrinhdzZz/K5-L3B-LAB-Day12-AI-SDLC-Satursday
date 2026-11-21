@@ -185,7 +185,7 @@ class GatherSim:
     def _monster_hit(self, m, events) -> bool:
         """Chạm thủy quái: -1 Máu, rơi hàng LIFO theo loss_ratio, bất tử, quái lùi. Trả True nếu ngất."""
         mt = self.t["monsters"]
-        n = int(len(self.hold) * mt["loss_ratio"] + 0.5)
+        n = math.floor(len(self.hold) * mt["loss_ratio"])
         lost = [self.hold.pop() for _ in range(n)]
         self.hp -= 1
         self.invuln_ticks = mt["invuln_ticks"]
