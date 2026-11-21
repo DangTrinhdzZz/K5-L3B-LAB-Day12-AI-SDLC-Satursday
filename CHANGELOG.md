@@ -2,6 +2,27 @@
 
 Ghi theo từng phase; mới nhất ở trên.
 
+## [1.0.2] — 2026-11-21
+
+Bản vá sau v1.0.1: sửa 5 lỗi luật còn lại, mỗi lỗi kèm test hồi quy; **không còn lỗi đã biết**.
+
+### Sửa
+- Quán: boa khi tỷ lệ kiên nhẫn còn lại đúng 0.5 (đạt ngưỡng `tip_min_patience_ratio`).
+- Quán: kẹp uy tín trong [0, 5] khi cộng `tip_reputation`.
+- Quán: `money` / `earned` / `shift_earned` cộng cả boa (`paid.amount`).
+- Shop: đủ đúng giá vẫn mua được.
+- Giữ chỗ: chọn cá thể chưa ươn **tươi nhất**, hòa theo id (lỗi đã biết của v1.0.1).
+
+### Người sửa
+- Tanh0406: boa 0.5, kẹp uy tín, tiền cộng boa.
+- Tanh0406 + Vũ Tuấn Đạt (datkunal) làm cặp trên cùng máy (`Co-authored-by`): Shop đúng giá, giữ chỗ tươi nhất.
+- (v1.0.1: totoca6969 — khách đầu tiên, customer_left, đóng ca, khách theo kế hoạch; iamdvmk — ngưỡng ươn;
+  MinhNGD76 — số món rơi khi Cá Sấu chạm.)
+
+### Kiểm chứng
+- `PYTHONPATH=tests:. python3 -m unittest discover -s tests` → 139 test OK (1 skip: bench thật); bằng chứng chạy lại ở
+  `docs/proof/phase-4/`.
+
 ## [1.0.1] — 2026-11-21
 
 Bản sửa lỗi sau v1.0.0, contract giữ **v1.3** (không đổi schema, không đổi số chuẩn).
