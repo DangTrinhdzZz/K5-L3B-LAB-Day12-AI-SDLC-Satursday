@@ -139,6 +139,7 @@ class GatherSim:
         """Cập nhật oxy / ngạt / Máu sau khi bơi. Trả True nếu vừa ngất (buổi sáng kết thúc)."""
         if self._at_surface():
             self.oxygen_ticks = min(self.oxygen_max, self.oxygen_ticks + self.t["oxygen_refill_per_tick"])
+            self.zero_oxy_ticks = 0  # mặt nước: hồi oxy và reset ngạt
             return False
         prev = self.oxygen_ticks
         self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
