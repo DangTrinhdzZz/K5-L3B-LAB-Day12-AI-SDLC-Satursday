@@ -2,15 +2,44 @@
 
 Ghi theo từng phase; mới nhất ở trên.
 
+## [1.0.2] — 2026-11-21
+
+Bản vá sau v1.0.1: sửa 5 lỗi luật còn lại, mỗi lỗi kèm test hồi quy; **không còn lỗi đã biết**.
+
+### Sửa
+- Quán: boa khi tỷ lệ kiên nhẫn còn lại đúng 0.5 (đạt ngưỡng `tip_min_patience_ratio`).
+- Quán: kẹp uy tín trong [0, 5] khi cộng `tip_reputation`.
+- Quán: `money` / `earned` / `shift_earned` cộng cả boa (`paid.amount`).
+- Shop: đủ đúng giá vẫn mua được.
+- Giữ chỗ: chọn cá thể chưa ươn **tươi nhất**, hòa theo id (lỗi đã biết của v1.0.1).
+
+### Người sửa
+- Tanh0406: boa 0.5, kẹp uy tín, tiền cộng boa.
+- Tanh0406 + Vũ Tuấn Đạt (datkunal) làm cặp trên cùng máy (`Co-authored-by`): Shop đúng giá, giữ chỗ tươi nhất.
+- (v1.0.1: totoca6969 — khách đầu tiên, customer_left, đóng ca, khách theo kế hoạch; iamdvmk — ngưỡng ươn;
+  MinhNGD76 — số món rơi khi Cá Sấu chạm.)
+
+### Kiểm chứng
+- `PYTHONPATH=tests:. python3 -m unittest discover -s tests` → 139 test OK (1 skip: bench thật); bằng chứng chạy lại ở
+  `docs/proof/phase-4/`.
+
 ## [1.0.1] — 2026-11-21
 
-Bản vá sau v1.0.0: sửa 10 lỗi luật đã nêu ở mục "Lỗi đã biết" của Release v1.0.0, mỗi lỗi kèm một test hồi quy.
-Người sửa: totoca6969 (khách đầu tiên, customer_left, đóng ca, khách theo kế hoạch), iamdvmk (ngưỡng ươn),
-Tanh0406 (boa 0.5, kẹp uy tín, tiền cộng boa), Tanh0406 + Vũ Tuấn Đạt / datkunal làm cặp (Shop đúng giá, giữ chỗ tươi nhất).
-- Quán: khách đầu tiên đến đúng `first_customer_tick`; `customer_left` mang uy tín sau thay đổi; đóng ca không trừ
-  uy tín khách đang chờ; boa khi tỷ lệ kiên nhẫn đúng 0.5; kẹp uy tín khi cộng `tip_reputation`; tiền / earned cộng boa.
-- Vòng ngày: khách chỉ gọi món thuộc kế hoạch Ngày; Shop cho mua khi tiền đúng bằng giá.
-- Độ tươi: ươn khi `fresh < 30` (ví dụ ngưỡng của Ticket-03 phát `spoiled` ở tick 1); giữ chỗ chọn cá thể tươi nhất.
+Bản sửa lỗi sau v1.0.0, contract giữ **v1.3** (không đổi schema, không đổi số chuẩn).
+
+### Sửa
+- Quán: khách đầu tiên đến đúng `first_customer_tick` (trước đây trễ thêm một chu kỳ 15 s).
+- Quán: event `customer_left` mang uy tín **sau** khi trừ.
+- Quán: hết ca, khách còn chờ rời với `closing` **không** bị trừ uy tín.
+- Day: khách chỉ gọi món thuộc kế hoạch Ngày (Ticket-02 mục 2, 4.5).
+- Cá Sấu: số món rơi khi bị chạm = `floor(số đang mang × loss_ratio)`; test đổi sang kho cá thể v1.2.
+- Độ tươi: ươn khi `fresh < spoiled_below` (đúng 30 chưa ươn; ví dụ ngưỡng của Ticket-03 phát `spoiled` ở tick 1).
+
+### Kiểm chứng
+- `PYTHONPATH=tests:. python3 -m unittest discover -s tests` → Ran 134 tests, OK (skipped=1).
+
+### Lỗi đã biết
+- Giữ chỗ vẫn chọn cá thể theo id nhỏ nhất thay vì tươi nhất (`Freshness.freshest()`, Ticket-03 mục 1 "Giữ theo id"): khách có thể giữ hàng cũ hơn, giá chốt thấp hơn. Sẽ sửa ở bản sau.
 
 ## [1.0.0] — 2026-11-21
 

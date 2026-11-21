@@ -1,6 +1,6 @@
 """Đóng gói bản phát hành: python3 tools/package.py [ref] -> dist/quan-an-cho-noi-<version>.zip
 
-Dùng `git archive` nên gói đúng nội dung đã commit ở `ref` (mặc định HEAD, khi phát hành dùng tag v1.0.0), không lẫn
+Dùng `git archive` nên gói đúng nội dung đã commit ở `ref` (mặc định HEAD, khi phát hành dùng tag v1.0.1), không lẫn
 file tạm trong thư mục làm việc. Gói chạy được ngay: giải nén, vào thư mục, `python3 -m chonoi.live --mode day`.
 """
 
@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 
-VERSION = "1.0.0"
+VERSION = "1.0.2"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
