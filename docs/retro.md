@@ -15,6 +15,9 @@
 ### Rà lại hành động sau Phase 2
 - **Đã làm:** 4 bạn (iamdvmk, MinhNGD76, BSFactor, FPT-Trungocsdiogee) sửa lát trên nhánh riêng, mỗi PR có test
   (PR #3–#10). Commit của mỗi người đứng đúng tài khoản GitHub.
+- **Bản vá v1.0.1:** 10 lỗi luật còn lại: totoca6969 sửa 4 (khách đầu tiên, customer_left, đóng ca, khách theo kế
+  hoạch), iamdvmk sửa ngưỡng ươn, Tanh0406 sửa 3 (boa 0.5, kẹp uy tín, tiền cộng boa) và 2 (Shop đúng giá, giữ chỗ
+  tươi nhất) làm cặp cùng Vũ Tuấn Đạt (datkunal) trên cùng máy, ghi `Co-authored-by`.
 - **Còn vướng:** lát quán (khách / kiên nhẫn / boa / tiền) và 2 lỗi độ tươi chưa có người nhận đúng hạn → cần người
   dự phòng (cột cuối `TEAM.md`) nhận sớm hơn. *(nhóm bổ sung lý do)*
 

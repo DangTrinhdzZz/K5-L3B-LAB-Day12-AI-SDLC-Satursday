@@ -2,6 +2,16 @@
 
 Ghi theo từng phase; mới nhất ở trên.
 
+## [1.0.1] — 2026-11-21
+
+Bản vá sau v1.0.0: sửa 10 lỗi luật đã nêu ở mục "Lỗi đã biết" của Release v1.0.0, mỗi lỗi kèm một test hồi quy.
+Người sửa: totoca6969 (khách đầu tiên, customer_left, đóng ca, khách theo kế hoạch), iamdvmk (ngưỡng ươn),
+Tanh0406 (boa 0.5, kẹp uy tín, tiền cộng boa), Tanh0406 + Vũ Tuấn Đạt / datkunal làm cặp (Shop đúng giá, giữ chỗ tươi nhất).
+- Quán: khách đầu tiên đến đúng `first_customer_tick`; `customer_left` mang uy tín sau thay đổi; đóng ca không trừ
+  uy tín khách đang chờ; boa khi tỷ lệ kiên nhẫn đúng 0.5; kẹp uy tín khi cộng `tip_reputation`; tiền / earned cộng boa.
+- Vòng ngày: khách chỉ gọi món thuộc kế hoạch Ngày; Shop cho mua khi tiền đúng bằng giá.
+- Độ tươi: ươn khi `fresh < 30` (ví dụ ngưỡng của Ticket-03 phát `spoiled` ở tick 1); giữ chỗ chọn cá thể tươi nhất.
+
 ## [1.0.0] — 2026-11-21
 
 ### Phase 4 — contract v1.3, phát hành
