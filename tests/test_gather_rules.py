@@ -87,6 +87,13 @@ class Faint(unittest.TestCase):
 
 
 class Harvest(unittest.TestCase):
+    def test_gather_includes_radius_edge(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [22, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=2)
+        self.assertEqual([event["data"]["node_id"] for event in events(rows, "gather")], ["N1"])
+
     def test_gather_nearest_ready_node_at_surface(self):
         with Workdir() as w:
             nodes = [{"id": "N1", "kind": "bong_dien_dien", "pos": [21, 0]},

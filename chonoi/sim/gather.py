@@ -172,7 +172,7 @@ class GatherSim:
         """Hái nút `ready` gần nhất trong interact_radius (id nhỏ khi bằng nhau)."""
         r = self.t["interact_radius"]
         cands = [(math.dist(self.pos, n["pos"]), n["id"], n) for n in self.nodes
-                 if n["regrow_ticks"] == 0 and math.dist(self.pos, n["pos"]) < r]
+                 if n["regrow_ticks"] == 0 and math.dist(self.pos, n["pos"]) <= r]
         node = self._nearest(cands)
         if node is None:
             return
