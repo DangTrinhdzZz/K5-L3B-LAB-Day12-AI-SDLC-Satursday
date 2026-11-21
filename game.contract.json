@@ -3,7 +3,7 @@
   "team": "satursday",
   "team_size": 7,
   "build_cmd": "true",
-  "run_cmd": "python3 -m chonoi.live --mode gather",
+  "run_cmd": "python3 -m chonoi.live --mode day",
   "headless_cmd": "python3 -m chonoi.headless",
   "tuning": {
     "tick_hz": 60,
