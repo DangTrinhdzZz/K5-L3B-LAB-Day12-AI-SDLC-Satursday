@@ -1,0 +1,47 @@
+# máy đo: Windows 10 Home 19045, Python 3.12.4 (bản cài python.org, chỉ có python.exe), commit 0f0e67b (v1.0.2)
+# người chạy: datkunal, kiểm chứng lại bản phát hành trên máy thứ hai
+$ where python3
+C:\Users\<user>\AppData\Local\Microsoft\WindowsApps\python3.exe
+$ python3 --version
+Python was not found; run without arguments to install from the Microsoft Store, ...
+exit=49
+
+## 1. Chạy test thẳng (python3 là lối tắt giả của Store)
+$ PYTHONUTF8=1 PYTHONPATH="tests;." python -m unittest discover -s tests
+AssertionError: 9009 != 0      (headless_cmd "python3 -m chonoi.headless" không chạy được)
+Ran 139 tests
+FAILED (failures=142, skipped=1)
+-> không phải lỗi luật: mọi test hộp đen hỏng vì không gọi được python3.
+-> thử tạo python3.cmd (gọi python.exe) trong PATH: VẪN 9009, vì subprocess.run([...]) không chạy file .cmd.
+
+## 2. Có python3.exe thật (chép python.exe vào thư mục đứng trước WindowsApps trong PATH), không đổi contract
+$ cp "$(dirname "$(which python)")/python.exe" <thư mục>/python3.exe
+$ python3 -c "import sys; print(sys.prefix)"
+C:\Users\<user>\AppData\Local\Programs\Python\Python312
+$ PATH=<thư mục>:$PATH PYTHONUTF8=1 PYTHONPATH="tests;." python -m unittest discover -s tests -v
+test_buy_with_exact_money (test_day_mode.DayFlow.test_buy_with_exact_money) ... ok
+test_reserve_picks_freshest_item (test_phase3_freshness.QuanFreshness.test_reserve_picks_freshest_item) ... ok
+Ran 139 tests in 44.170s
+
+OK (skipped=1)      (skip: bench thật, chỉ chạy khi CHONOI_RUN_BENCH=1)
+
+## 3. Soak (v1.3), chạy 2 lần
+$ python -m chonoi.soak --seed 7 --days 10 --out soak.json
+exit=0
+{"days": 10, "days_completed": 10, "crashes": 0, "duration_s": 4.829}
+$ python -m chonoi.soak --seed 7 --days 10 --out soak-lan2.json
+exit=0
+{"days": 10, "days_completed": 10, "crashes": 0, "duration_s": 4.775}
+hai lần chạy giống nhau (bỏ duration_s): True
+results[9] = {"day": 10, "earned": 2841, "reputation": 5, "score": 3341}
+
+## 4. Headless day 5 Ngày, tất định
+$ python -m chonoi.headless --mode day --seed 1 --ticks 999999 --days 5 --out d1.jsonl   (2 lần: d1, d2)
+exit=0 (cả hai lần), 11222 dòng
+$ cmp d1.jsonl d2.jsonl
+giống từng byte
+dòng cuối: {"type":"end","ticks":111000,"sim_tick":111000,"mode":"day","state":"finished","reason":"days_complete",...,"days_completed":5}
+
+## Kết luận
+v1.0.2 đạt trên máy Windows thứ hai: 139 test xanh, soak 10/10 Ngày 0 crash và lặp lại được, day tất định.
+Điều kiện: phải có python3 thật trong PATH (cách làm ghi ở README, mục Yêu cầu môi trường).

@@ -21,6 +21,11 @@
 | AC-P4-14 Mở rộng phụ đề SFX: phụ đề hiện đúng lúc khi tắt âm thanh | chơi thử `?sound=0` | captions.png | Đạt ("[tiếng cá quẫy]" lúc bắt cá) |
 | AC-P4-15 Retro rà hành động P2, phản tư cá nhân đủ người | đọc `docs/retro.md`, `docs/members/` | | Đạt: `docs/retro.md` rà hành động sau P2; phản tư: xem `docs/members/` (thiếu bài của 4 bạn, tự bổ sung) |
 
+## Kiểm chứng lại v1.0.2 trên máy thứ hai (datkunal)
+Windows 10, Python 3.12.4, commit `0f0e67b` (tag `v1.0.2`): 139 test OK (1 skip bench), soak 10/10 Ngày 0 crash và 2 lần
+giống nhau, headless day 5 Ngày giống từng byte. Cần `python3` thật trong PATH: lối tắt `python3` của Microsoft Store làm
+mọi test hộp đen hỏng với mã 9009 (cách sửa ở README). Bằng chứng: [`windows-datkunal.txt`](../proof/phase-4/windows-datkunal.txt).
+
 ## Đánh giá ngắn
 - Đạt: lệnh v1.3, bench, soak, clone sạch, cảnh báo + tương phản cao, 2 mở rộng, regression.
 - Cần trước khi phát hành: merge các bản sửa còn lại, chạy lại toàn bộ test + bench + soak trên commit gắn tag, cập nhật bảng trên.
