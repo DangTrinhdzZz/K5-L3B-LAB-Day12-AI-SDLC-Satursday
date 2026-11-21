@@ -42,7 +42,7 @@ class Freshness:
         self.quan_per_tick = frac(f["quan_decay_per_s"]) / TICK_HZ
 
     def is_spoiled(self, it) -> bool:
-        return frac(it["fresh"]) <= self.threshold
+        return frac(it["fresh"]) < self.threshold  # ươn khi fresh < spoiled_below (đúng 30 chưa ươn)
 
     def decay(self, items, per_tick, location):
         """Hao tươi một tick (kẹp đáy 0). Trả (events spoiled theo id, danh sách id vừa ươn)."""
