@@ -101,6 +101,13 @@ class Serve(unittest.TestCase):
 
 
 class Customers(unittest.TestCase):
+    def test_customer_arrives_at_first_tick(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": items("ca_loc", "ca_loc", "ca_loc")}, ticks=121, every=1)
+            arrived = events(rows, "customer_arrived")
+            self.assertEqual(len(arrived), 1)
+            self.assertEqual(arrived[0]["tick"], tuning()["quan"]["first_customer_tick"])
+
     def test_patience_runs_out(self):
         with Workdir() as w:
             rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
@@ -111,6 +118,23 @@ class Customers(unittest.TestCase):
             self.assertEqual(left[0]["data"]["reason"], "patience")
             self.assertAlmostEqual(by_tick(rows)[5]["reputation"], 2.5, places=2)
             self.assertEqual(by_tick(rows)[5]["customers"], [])
+
+    def test_customer_left_reports_updated_reputation(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
+                                "customers": [dict(C1, patience_ticks_left=5)]}, ticks=10)
+            left = events(rows, "customer_left")
+            self.assertEqual(left[0]["data"]["reputation"], 2.5)
+            self.assertEqual(by_tick(rows)[5]["reputation"], 2.5)
+
+    def test_closing_customer_does_not_lose_reputation(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
+                                "time_left_ticks": 3, "customers": [dict(C1)]}, ticks=10)
+            left = events(rows, "customer_left")
+            self.assertEqual(left[0]["data"]["reason"], "closing")
+            self.assertEqual(left[0]["data"]["reputation"], 3.0)
+            self.assertEqual(events(rows, "quan_end")[0]["data"]["reputation"], 3.0)
 
     def test_missing_reserved_is_filled_from_recipe(self):
         with Workdir() as w:
