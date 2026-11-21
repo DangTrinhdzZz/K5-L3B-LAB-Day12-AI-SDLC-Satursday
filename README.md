@@ -1,12 +1,25 @@
 # Quán Ăn Chợ Nổi — nhóm Satursday
 
 > Day 12 · AI SDLC · K5-L3B. Út Sen lặn bắt cá, hái bông trên sông Chín Khúc buổi sáng, tối mở quán trên nhà bè của Má Tư, cuối ngày mua nâng cấp cho lần lặn sau.
-> Đề bài và lịch phase: **[Chợ Nổi Lab](https://claude.ai/artifact/E35v787wSx2wDgPTNhMVDg)** · Thành viên và vai: [`TEAM.md`](TEAM.md) · Test Contract **v1.3** · bản phát hành **v1.0.0** ([release notes](docs/release-notes-v1.0.0.md)).
+> Đề bài và lịch phase: **[Chợ Nổi Lab](https://claude.ai/artifact/E35v787wSx2wDgPTNhMVDg)** · Thành viên và vai: [`TEAM.md`](TEAM.md) · Test Contract **v1.3** · bản phát hành mới nhất **v1.0.2** ([release notes](docs/release-notes-v1.0.2.md); trước đó [v1.0.1](docs/release-notes-v1.0.1.md), [v1.0.0](docs/release-notes-v1.0.0.md)).
 
 ## Yêu cầu môi trường
 
 - Python **3.10+** (chỉ thư viện chuẩn, không `pip install`), macOS hoặc Linux (Windows cũng chạy được).
 - Trình duyệt bất kỳ để chơi. Riêng **benchmark** cần Chrome / Chromium / Edge (tự tìm; hoặc `CHONOI_BROWSER=<đường dẫn>`).
+
+**Windows: khi `python3` báo "Python was not found".** Bản cài Python từ python.org chỉ có `python.exe`. Khi đó `python3`
+là lối tắt giả của Microsoft Store (`...\WindowsApps\python3.exe`). Chơi và chạy lệnh thì thay `python3` bằng `python`.
+Test hộp đen gọi `headless_cmd` (`python3 -m chonoi.headless`) nên cần một `python3` thật, nếu không mọi test này hỏng với
+mã thoát **9009**. Cách sửa không cần đổi contract: chép `python.exe` thành `python3.exe` vào một thư mục đứng **trước**
+`WindowsApps` trong PATH rồi chạy test (Git Bash):
+
+```bash
+mkdir -p ~/bin && cp "$(dirname "$(which python)")/python.exe" ~/bin/python3.exe
+PATH=~/bin:$PATH PYTHONUTF8=1 PYTHONPATH="tests;." python -m unittest discover -s tests -v
+```
+
+Kết quả đo theo cách này: [`docs/proof/phase-4/windows-datkunal.txt`](docs/proof/phase-4/windows-datkunal.txt).
 
 ## Chạy từ clone sạch (3 lệnh)
 
