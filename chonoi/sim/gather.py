@@ -204,7 +204,7 @@ class GatherSim:
         fish = cands[0][2]
         events.append(("hold_full", {"action": "catch", "node_id": fish["id"],
                                      "required": self.t["fish_yield"][fish["kind"]], "free": self._free()}))
-        self.catch_cd_ticks = cd
+        # Thiếu chỗ: giữ đàn và KHÔNG đặt hồi chiêu (PRD-0 mục F "Gather").
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]

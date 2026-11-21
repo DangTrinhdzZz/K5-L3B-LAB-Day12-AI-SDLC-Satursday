@@ -144,6 +144,21 @@ class Catch(unittest.TestCase):
             self.assertEqual([r for r in rows if r["type"] == "event"], [])
             self.assertEqual(by_tick(rows)[2]["player"]["catch_cd_ticks"], 0)
 
+    @staticmethod
+    def _full_hold_block(extra_fish=()):
+        """Giỏ còn 1 chỗ trống, đàn cá linh (yield 3) gần nhất -> không đủ chỗ."""
+        cap = tuning_gather()["hold_capacity"]
+        return {"player": {"pos": [20, 10]}, "hold": ["ca_loc"] * (cap - 1),
+                "fish": [{"id": "F1", "kind": "ca_linh", "pos": [21, 10]}, *extra_fish]}
+
+    def test_hold_full_on_catch_keeps_fish_and_no_cooldown(self):
+        with Workdir() as w:
+            rows = run_gather(w, self._full_hold_block(), inputs=[{"tick": 0, "catch": True}], ticks=2)
+            self.assertEqual(len(events(rows, "hold_full")), 1)
+            s = by_tick(rows)[1]
+            self.assertEqual(s["player"]["catch_cd_ticks"], 0)
+            self.assertEqual([f["id"] for f in s["fish"]], ["F1"])
+
 
 class DockInventory(unittest.TestCase):
     def test_dock_checked_before_harvest(self):
