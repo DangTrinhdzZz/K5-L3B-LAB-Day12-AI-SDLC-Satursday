@@ -173,12 +173,12 @@ class Crocodile(unittest.TestCase):
     def test_hit_drop_count_is_floor_of_half(self):
         # Ticket-02 1.2: bỏ floor(số đang mang × loss_ratio); giỏ lẻ 3 món -> rơi 1, không phải 2
         with Workdir() as w:
-            rows = run(w, "gather", {"random_fish": False, "hold": ["ca_loc", "bong_sung", "ca_linh"],
+            rows = run(w, "gather", {"random_fish": False, "hold": items("ca_loc", "bong_sung", "ca_linh"),
                                      "player": {"pos": [60, 23]}}, ticks=2)
             hit = events(rows, "monster_hit")
             self.assertEqual(len(hit), 1)
-            self.assertEqual(hit[0]["data"]["lost"], ["ca_linh"])
-            self.assertEqual(by_tick(rows)[1]["hold"], ["ca_loc", "bong_sung"])
+            self.assertEqual(id_kind(hit[0]["data"]["lost"]), [("I3", "ca_linh")])
+            self.assertEqual(kinds_of(by_tick(rows)[1]["hold"]), ["ca_loc", "bong_sung"])
 
     def test_faint_by_monster(self):
         with Workdir() as w:
