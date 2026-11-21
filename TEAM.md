@@ -7,7 +7,7 @@
 | Trần Tuấn Anh | Tanh0406 | `sim/*` (khung luật gather + quan), `docs/contracts` | Integrator | mọi lát |
 | Đào Vũ Minh Khánh | iamdvmk | `sim/gather` lát 1 (oxy, ngạt) | QA lead | lát 2 |
 | … | … | `sim/gather` lát 1 (Máu, ngất, giỏ) | Scrum/Release | lát 1 |
-| … | … | `sim/gather` lát 2 (hái nút) | PO | lát 2 |
+| Nguyễn Nam Khánh | BSFactor | `sim/gather` lát 2 (hái nút) + `sim/monsters` | PO | lát 2 |
 | Nguyễn Văn Anh Trung | FPT-Trungocsdiogee | `sim/gather` lát 2 (bắt cá) + pause (`runner.Session`) | Dev | lát 1 |
 | … | … | `sim/quan` lát 3 (khách, kiên nhẫn) | Dev | lát 4 |
 | … | … | `sim/quan` lát 4 (bếp, phục vụ, tiền) + `client/ui` | Dev | lát 3 |
