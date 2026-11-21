@@ -188,23 +188,21 @@ class GatherSim:
     def _catch(self, events):
         """Bắt đàn cá gần nhất trong catch_radius (id nhỏ khi bằng nhau), lấy đủ yield hoặc hold_full."""
         r = self.t["catch_radius"]
-        cands = sorted(((math.dist(self.pos, f["pos"]), f["id"], f) for f in self.fish
-                        if math.dist(self.pos, f["pos"]) <= r), key=lambda c: (c[0], id_key(c[1])))
-        if not cands:
+        cands = [(math.dist(self.pos, f["pos"]), f["id"], f) for f in self.fish
+                 if math.dist(self.pos, f["pos"]) <= r]
+        fish = self._nearest(cands)
+        if fish is None:
             return
-        cd = int(round(self.t["catch_cooldown_s"] * TICK))
-        for _, _, fish in cands:
-            y = self.t["fish_yield"][fish["kind"]]
-            if self._free() >= y:
-                self.hold.extend([fish["kind"]] * y)
-                self.fish.remove(fish)
-                self.catch_cd_ticks = cd
-                events.append(("fish_caught", {"fish_id": fish["id"], "kind": fish["kind"], "yield": y}))
-                return
-        fish = cands[0][2]
-        events.append(("hold_full", {"action": "catch", "node_id": fish["id"],
-                                     "required": self.t["fish_yield"][fish["kind"]], "free": self._free()}))
-        # Thiếu chỗ: giữ đàn và KHÔNG đặt hồi chiêu (PRD-0 mục F "Gather").
+        y = self.t["fish_yield"][fish["kind"]]
+        if self._free() < y:
+            # Thiếu chỗ: giữ đàn, KHÔNG đặt hồi chiêu, không thử đàn khác (PRD-0 mục F "Gather").
+            events.append(("hold_full", {"action": "catch", "node_id": fish["id"],
+                                         "required": y, "free": self._free()}))
+            return
+        self.hold.extend([fish["kind"]] * y)
+        self.fish.remove(fish)
+        self.catch_cd_ticks = int(round(self.t["catch_cooldown_s"] * TICK))
+        events.append(("fish_caught", {"fish_id": fish["id"], "kind": fish["kind"], "yield": y}))
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]

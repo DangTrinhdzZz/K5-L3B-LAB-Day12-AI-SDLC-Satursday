@@ -159,6 +159,17 @@ class Catch(unittest.TestCase):
             self.assertEqual(s["player"]["catch_cd_ticks"], 0)
             self.assertEqual([f["id"] for f in s["fish"]], ["F1"])
 
+    def test_hold_full_does_not_try_other_fish(self):
+        # F2 (cá lóc, yield 1) vừa đủ chỗ nhưng không phải đàn gần nhất -> không bắt
+        f2 = {"id": "F2", "kind": "ca_loc", "pos": [21.5, 10]}
+        with Workdir() as w:
+            rows = run_gather(w, self._full_hold_block([f2]), inputs=[{"tick": 0, "catch": True}], ticks=2)
+            self.assertEqual(events(rows, "fish_caught"), [])
+            self.assertEqual(len(events(rows, "hold_full")), 1)
+            s = by_tick(rows)[1]
+            self.assertEqual([f["id"] for f in s["fish"]], ["F1", "F2"])
+            self.assertEqual(len(s["hold"]), tuning_gather()["hold_capacity"] - 1)
+
 
 class DockInventory(unittest.TestCase):
     def test_dock_checked_before_harvest(self):
