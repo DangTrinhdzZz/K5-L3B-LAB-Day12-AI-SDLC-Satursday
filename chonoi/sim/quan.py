@@ -274,7 +274,8 @@ class QuanSim:
                 s["state"], s["dish"], s["cook_ticks_left"], s["ready_ticks"] = "idle", None, 0, 0
         if self.hand and self.hand["order_id"] == c["id"]:
             self.hand = None
-        self.reputation = self._clamp_rep(self.reputation + self.t["left_reputation_delta"])
+        if reason != "closing":
+            self.reputation = self._clamp_rep(self.reputation + self.t["left_reputation_delta"])
         events.append(("customer_left", {"order_id": c["id"], "table_id": c["table_id"], "reason": reason,
                                          "reputation": self.reputation}))
         self.customers.remove(c)
