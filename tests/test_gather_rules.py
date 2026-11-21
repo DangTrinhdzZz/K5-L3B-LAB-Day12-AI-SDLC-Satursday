@@ -86,5 +86,80 @@ class Faint(unittest.TestCase):
             self.assertEqual(snapshots(rows)[-1]["state"], "finished")
 
 
+class Harvest(unittest.TestCase):
+    def test_gather_nearest_ready_node_at_surface(self):
+        with Workdir() as w:
+            nodes = [{"id": "N1", "kind": "bong_dien_dien", "pos": [21, 0]},
+                     {"id": "N2", "kind": "bong_sung", "pos": [20.5, 0]}]
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "nodes": nodes, "random_fish": False},
+                              inputs=[{"tick": 0, "interact": True}], ticks=2)
+            ev = events(rows, "gather")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["tick"], 1)
+            self.assertEqual(ev[0]["data"], {"node_id": "N2", "kind": "bong_sung", "amount": 1})
+            s = by_tick(rows)[1]
+            self.assertEqual(s["hold"], ["bong_sung"])
+            n2 = [n for n in s["nodes"] if n["id"] == "N2"][0]
+            self.assertFalse(n2["ready"])
+
+    def test_hold_full_keeps_node(self):
+        cap = tuning_gather()["hold_capacity"]
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "hold": ["ca_loc"] * cap, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [21, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=2)
+            ev = events(rows, "hold_full")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["data"], {"action": "gather", "node_id": "N1", "required": 1, "free": 0})
+            self.assertTrue(by_tick(rows)[1]["nodes"][0]["ready"])
+            self.assertEqual(events(rows, "gather"), [])
+
+
+class Catch(unittest.TestCase):
+    def test_catch_nearest_fish_underwater(self):
+        g = tuning_gather()
+        with Workdir() as w:
+            fish = [{"id": "F1", "kind": "ca_linh", "pos": [21, 10]}, {"id": "F2", "kind": "ca_loc", "pos": [22, 10]}]
+            rows = run_gather(w, {"player": {"pos": [20, 10]}, "fish": fish},
+                              inputs=[{"tick": 0, "catch": True}], ticks=2)
+            ev = events(rows, "fish_caught")
+            self.assertEqual(len(ev), 1)
+            self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": "ca_linh", "yield": g["fish_yield"]["ca_linh"]})
+            s = by_tick(rows)[1]
+            self.assertEqual(s["hold"], ["ca_linh"] * g["fish_yield"]["ca_linh"])
+            self.assertEqual([f["id"] for f in s["fish"]], ["F2"])
+            self.assertEqual(s["player"]["catch_cd_ticks"], int(g["catch_cooldown_s"] * 60))
+
+    def test_catch_ignored_at_surface(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "fish": [{"id": "F1", "kind": "ca_loc", "pos": [20, 1]}]},
+                              inputs=[{"tick": 0, "catch": True}], ticks=2)
+            self.assertEqual(events(rows, "fish_caught"), [])
+            self.assertEqual(by_tick(rows)[2]["player"]["catch_cd_ticks"], 0)
+
+    def test_no_fish_in_range_no_cooldown(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 10]}, "fish": [{"id": "F1", "kind": "ca_loc", "pos": [40, 10]}]},
+                              inputs=[{"tick": 0, "catch": True}], ticks=2)
+            self.assertEqual([r for r in rows if r["type"] == "event"], [])
+            self.assertEqual(by_tick(rows)[2]["player"]["catch_cd_ticks"], 0)
+
+
+class DockInventory(unittest.TestCase):
+    def test_dock_checked_before_harvest(self):
+        with Workdir() as w:
+            inv = w.path("kho.json")
+            rows = run_gather(w, {"player": {"pos": [3, 0]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [4, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}, {"tick": 1, "interact": False},
+                                      {"tick": 2, "interact": True}], ticks=10, inv_out=inv)
+            # tick 0: trong bến -> docked ngay (bến xét trước hái)
+            end = events(rows, "gather_end")
+            self.assertEqual(end[0]["tick"], 1)
+            self.assertEqual(end[0]["data"]["reason"], "docked")
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {}})
+
+
 if __name__ == "__main__":
     unittest.main()

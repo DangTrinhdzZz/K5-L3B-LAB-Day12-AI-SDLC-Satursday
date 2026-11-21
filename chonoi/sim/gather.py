@@ -12,7 +12,7 @@ Lát 1 (bơi + oxy + biên + giỏ) — PRD-0 mục F "Gather":
       - Máu về 0 -> ngất (faint, gather_end reason `fainted`, mất toàn bộ giỏ, kho rỗng)
       - sự kiện dive / surface / oxygen_empty / choke / faint
       - giỏ: thứ tự nhặt (LIFO), sức chứa hold_capacity
-  TODO(nhóm, lát 2): hái + bắt cá + cập bến + kho
+Lát 2 (hái + bắt cá + cập bến + kho):
       - hái nút ở mặt nước (gather, hold_full), nút mọc lại (node_regrown đã có phần đếm ngược)
       - bắt đàn cá bằng `catch` (fish_caught, hold_full, hồi chiêu catch_cd_ticks, chỉ khi dưới nước)
       - cập bến xét TRƯỚC hái (đã có); ghi kho đúng một lần do runner lo
@@ -21,7 +21,7 @@ Các tính năng của phase sau chưa nằm trong khung này.
 
 import math
 
-from ..ids import sort_by_id
+from ..ids import id_key, sort_by_id
 from ..inventory import hold_to_items
 from .ramp import ramp_velocity
 
@@ -122,11 +122,10 @@ class GatherSim:
             if self._in_dock():
                 self._finish("docked", events)
                 return events
-            # TODO(nhóm, lát 2): chỉ khi ở mặt nước: hái nút `ready` gần nhất trong interact_radius
-            #   (id nhỏ khi bằng nhau): gather / hold_full; đặt regrow_ticks cho nút.
+            self._harvest(events)
         # 4. bắt cá
-        if inp.pressed("catch"):
-            pass  # TODO(nhóm, lát 2): chỉ khi catch_cd_ticks == 0 và dưới nước: fish_caught / hold_full.
+        if inp.pressed("catch") and self.catch_cd_ticks == 0 and not self._at_surface():
+            self._catch(events)
         # 5. hết giờ
         if self.time_left_ticks <= 0:
             self._finish("time", events)
@@ -158,6 +157,54 @@ class GatherSim:
                     self._finish("fainted", events)
                     return True
         return False
+
+    def _free(self) -> int:
+        return self.t["hold_capacity"] - len(self.hold)
+
+    @staticmethod
+    def _nearest(cands):
+        """cands: [(khoảng cách, id, thực thể)] -> thực thể gần nhất, hòa theo id."""
+        if not cands:
+            return None
+        return min(cands, key=lambda c: (c[0], id_key(c[1])))[2]
+
+    def _harvest(self, events):
+        """Hái nút `ready` gần nhất trong interact_radius (id nhỏ khi bằng nhau)."""
+        r = self.t["interact_radius"]
+        cands = [(math.dist(self.pos, n["pos"]), n["id"], n) for n in self.nodes
+                 if n["regrow_ticks"] == 0 and math.dist(self.pos, n["pos"]) < r]
+        node = self._nearest(cands)
+        if node is None:
+            return
+        amount = self.t["node_yield"]
+        if self._free() < amount:
+            events.append(("hold_full", {"action": "gather", "node_id": node["id"],
+                                         "required": amount, "free": self._free()}))
+            return
+        self.hold.extend([node["kind"]] * amount)
+        node["regrow_ticks"] = int(round(self.t["regrow_s"]))
+        events.append(("gather", {"node_id": node["id"], "kind": node["kind"], "amount": amount}))
+
+    def _catch(self, events):
+        """Bắt đàn cá gần nhất trong catch_radius (id nhỏ khi bằng nhau), lấy đủ yield hoặc hold_full."""
+        r = self.t["catch_radius"]
+        cands = sorted(((math.dist(self.pos, f["pos"]), f["id"], f) for f in self.fish
+                        if math.dist(self.pos, f["pos"]) <= r), key=lambda c: (c[0], id_key(c[1])))
+        if not cands:
+            return
+        cd = int(round(self.t["catch_cooldown_s"] * TICK))
+        for _, _, fish in cands:
+            y = self.t["fish_yield"][fish["kind"]]
+            if self._free() >= y:
+                self.hold.extend([fish["kind"]] * y)
+                self.fish.remove(fish)
+                self.catch_cd_ticks = cd
+                events.append(("fish_caught", {"fish_id": fish["id"], "kind": fish["kind"], "yield": y}))
+                return
+        fish = cands[0][2]
+        events.append(("hold_full", {"action": "catch", "node_id": fish["id"],
+                                     "required": self.t["fish_yield"][fish["kind"]], "free": self._free()}))
+        self.catch_cd_ticks = cd
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]
