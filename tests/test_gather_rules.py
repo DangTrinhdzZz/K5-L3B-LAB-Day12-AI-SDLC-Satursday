@@ -87,6 +87,13 @@ class Faint(unittest.TestCase):
 
 
 class Harvest(unittest.TestCase):
+    def test_gather_includes_radius_edge(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [22, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=2)
+        self.assertEqual([event["data"]["node_id"] for event in events(rows, "gather")], ["N1"])
+
     def test_gather_nearest_ready_node_at_surface(self):
         with Workdir() as w:
             nodes = [{"id": "N1", "kind": "bong_dien_dien", "pos": [21, 0]},
@@ -102,6 +109,14 @@ class Harvest(unittest.TestCase):
             n2 = [n for n in s["nodes"] if n["id"] == "N2"][0]
             self.assertFalse(n2["ready"])
 
+    def test_node_regrows_after_seconds(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 0]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [21, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=1300)
+        self.assertEqual([(event["tick"], event["data"]) for event in events(rows, "node_regrown")],
+                         [(1201, {"node_id": "N1"})])
+
     def test_hold_full_keeps_node(self):
         cap = tuning_gather()["hold_capacity"]
         with Workdir() as w:
@@ -114,6 +129,13 @@ class Harvest(unittest.TestCase):
             self.assertTrue(by_tick(rows)[1]["nodes"][0]["ready"])
             self.assertEqual(events(rows, "gather"), [])
 
+
+    def test_gather_ignored_underwater(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [20, 1.5]}, "random_fish": False,
+                                  "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [20, 0]}]},
+                              inputs=[{"tick": 0, "interact": True}], ticks=2)
+        self.assertEqual(events(rows, "gather"), [])
 
 class Catch(unittest.TestCase):
     def test_catch_nearest_fish_underwater(self):

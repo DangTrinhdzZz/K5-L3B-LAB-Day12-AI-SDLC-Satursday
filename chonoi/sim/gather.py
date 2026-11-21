@@ -137,7 +137,8 @@ class GatherSim:
             if self._in_dock():
                 self._finish("docked", events)
                 return events
-            self._harvest(events)
+            if self._at_surface():
+                self._harvest(events)
         # 4. bắt cá
         if inp.pressed("catch") and self.catch_cd_ticks == 0 and not self._at_surface():
             self._catch(events)
@@ -214,7 +215,7 @@ class GatherSim:
         """Hái nút `ready` gần nhất trong interact_radius (id nhỏ khi bằng nhau)."""
         r = self.t["interact_radius"]
         cands = [(math.dist(self.pos, n["pos"]), n["id"], n) for n in self.nodes
-                 if n["regrow_ticks"] == 0 and math.dist(self.pos, n["pos"]) < r]
+                 if n["regrow_ticks"] == 0 and math.dist(self.pos, n["pos"]) <= r]
         node = self._nearest(cands)
         if node is None:
             return
@@ -224,7 +225,7 @@ class GatherSim:
                                          "required": amount, "free": self._free()}))
             return
         self.hold.extend([node["kind"]] * amount)
-        node["regrow_ticks"] = int(round(self.t["regrow_s"]))
+        node["regrow_ticks"] = int(round(self.t["regrow_s"] * TICK))
         events.append(("gather", {"node_id": node["id"], "kind": node["kind"], "amount": amount}))
 
     def _catch(self, events):
