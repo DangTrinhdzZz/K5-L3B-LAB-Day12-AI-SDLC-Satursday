@@ -283,7 +283,7 @@ class QuanSim:
     def _is_customer_tick(self, pt) -> bool:
         first = self.t["first_customer_tick"]
         interval = _ticks(self.t["customer_interval_s"])
-        return pt > first and (pt - first) % interval == 0
+        return pt >= first and (pt - first) % interval == 0
 
     def _spawn_customer(self, events):
         busy = {c["table_id"] for c in self.customers}

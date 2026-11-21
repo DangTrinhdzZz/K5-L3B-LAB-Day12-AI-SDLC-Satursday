@@ -98,6 +98,13 @@ class Serve(unittest.TestCase):
 
 
 class Customers(unittest.TestCase):
+    def test_customer_arrives_at_first_tick(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": {"ca_loc": 3}}, ticks=121, every=1)
+            arrived = events(rows, "customer_arrived")
+            self.assertEqual(len(arrived), 1)
+            self.assertEqual(arrived[0]["tick"], tuning()["quan"]["first_customer_tick"])
+
     def test_patience_runs_out(self):
         with Workdir() as w:
             rows = run_quan(w, {"stock": {"ca_loc": 1}, "random_customers": False,
