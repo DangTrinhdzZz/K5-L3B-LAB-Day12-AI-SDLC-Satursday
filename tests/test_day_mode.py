@@ -129,6 +129,14 @@ class DayFlow(unittest.TestCase):
             b = json.dumps(run_day(w, ticks=12000, every=37, seed=3))
             self.assertEqual(a, b)
 
+    def test_buy_with_exact_money(self):
+        # Ticket-02 "Shop và nâng cấp": đủ đúng giá vẫn mua được
+        sc = dict(FAST, day={"money": 250, "earned": 250})
+        with Workdir() as w:
+            rows = run_day(w, sc, inputs=[{"tick": 0, "interact": True}, {"tick": 2, "buy": "hp"}], ticks=4, every=1)
+            self.assertEqual(events(rows, "bought")[0]["data"], {"upgrade": "hp", "level": 1, "price": 250, "money": 0})
+            self.assertEqual(events(rows, "buy_failed"), [])
+
 
 class Pause(unittest.TestCase):
     def test_pause_freezes_gameplay_counters(self):

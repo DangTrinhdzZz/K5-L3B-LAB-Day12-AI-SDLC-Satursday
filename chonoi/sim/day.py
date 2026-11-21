@@ -149,7 +149,7 @@ class DaySim:
         if nxt > len(levels):
             return ("buy_failed", {"action": cmd, "reason": "max_level"}, "shop")
         price = levels[nxt - 1]["price"]
-        if self._money <= price:
+        if self._money < price:
             return ("buy_failed", {"action": cmd, "reason": "funds"}, "shop")
         self._money -= price
         self.upgrades[cmd] = nxt
