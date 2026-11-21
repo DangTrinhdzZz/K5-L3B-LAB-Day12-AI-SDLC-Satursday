@@ -1,0 +1,12 @@
+# máy đo: Windows 10, Python 3.13.1, commit f94ef1c
+# clone từ repo cục bộ ở commit trên (tương đương git clone <fork>)
+$ git clone <repo> && cd <repo>
+exit=0
+$ python3 -m chonoi.live --mode day --port 0   (lệnh 3 của README, cổng ngẫu nhiên để không đụng máy chủ khác)
+Mở trình duyệt tại http://127.0.0.1:64752/  (chế độ day, seed 1). Ctrl+C để dừng.
+GET / -> 35111 byte, có <canvas>: True
+GET /state -> mode day, phase gather, màn menu
+$ PYTHONPATH=tests:. python3 -m unittest discover -s tests   (trong bản clone)
+Ran 128 tests in 60.795s
+
+OK (skipped=1)

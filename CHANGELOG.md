@@ -1,5 +1,23 @@
 # Changelog
-## Unreleased
+
+Ghi theo từng phase; mới nhất ở trên.
+
+## [1.0.0] — 2026-11-21
+
+### Phase 4 — contract v1.3, phát hành
+- `contract_version: "1.3"`; thêm `bench_cmd` (`python3 -m chonoi.bench`) và `soak_cmd` (`python3 -m chonoi.soak`) ở gốc
+  manifest; gameplay, tuning, kho và JSONL giữ như v1.2.
+- Benchmark có render: cảnh lặn lõi, Út Sen đứng yên ở bến, Chrome / Chromium headless 1280×720, làm nóng 3 s,
+  ghi `bench.json {avg_fps, p1_low_fps, frames, measured_s, load_ms}`.
+- Soak: bot tất định chạy N Ngày trong một tiến trình (kế hoạch D1–D5 lặp từ Ngày 6), ghi `soak.json`.
+- Cảnh báo có biểu tượng + chữ: thủy quái gần, oxy sắp hết / hết hơi, khách sắp giận; chế độ tương phản cao
+  (phím H, Cài đặt ở menu chính và menu pause).
+- Mở rộng: bảng xếp hạng cục bộ (`extensions: ["leaderboard"]`, `--leaderboard` + `--player-name`,
+  `--export-leaderboard`); phụ đề hiệu ứng âm thanh (âm thanh WebAudio tổng hợp, M / C bật tắt).
+- Sửa: event `shop_end` mang số Ngày vừa đóng (trước đây mang Ngày mới).
+- Tích hợp PR #8, #9, #10; khôi phục phần sửa "số món rơi = floor(…)" bị mất khi gộp PR #9.
+- Đóng gói: `LICENSE`, `CREDITS.md`, `docs/release-notes-v1.0.0.md`, `tools/package.py` (zip từ `git archive`).
+
 ### Phase 3 — contract v1.2 "Mùa Nước Nổi" (BREAKING CHANGE)
 - **File kho đổi schema:** `{"items": {kind: n}}` → `{"items": [{"id": "I1", "kind": "ca_linh", "fresh": 100}, ...]}`.
   Bên đọc v1.2 trả **mã 2** cho file kho đếm, kind lạ, id trùng, fresh ngoài [0, 100]. Kho rỗng là `{"items": []}`.
@@ -16,11 +34,11 @@
   - `"reserved": {"ca_loc": 1}` → `"reserved": ["I1"]` (id phải có trong kho, chưa ươn, đủ công thức)
   - Trong test Python dùng helper `items(...)`, `kinds_of(...)`, `id_kind(...)` ở `tests/helpers.py`.
 - Phân tích tác động và thứ tự tích hợp: `docs/adr/0001-kho-ca-the-v12.md`.
-### Phase 2 (contract v1.1)
+### Phase 2 — contract v1.1
 - Số chuẩn Ticket-02, 6 nguyên liệu / 6 món, 2 bếp / 4 bàn; cá bơi và sinh theo lịch; Cá Sấu Năm Chèo (M1, M2 từ Ngày 3).
 - `--mode day` (D1–D5), Shop + nâng cấp oxy / Máu, pause, `--days`.
 - Cửa sổ chơi: menu chính, DayIntro / EveningIntro / DayResult / Tổng kết, menu pause, Shop, HUD theo mục 2.
-### Phase 1
+### Phase 1 — contract v1.0
 - Gather: oxy, ngạt, Máu, ngất, dive/surface, hái nút, bắt cá, hold_full, cập bến, file kho.
 - Quán: khách theo lịch, giữ chỗ, kiên nhẫn, bếp, bưng, phục vụ, boa, tiền, uy tín, quan_end.
 - Kiểm fixture quán theo PRD-0 mục D (mã 2); HUD sáng/tối; hợp đồng tích hợp; skill nhóm.
