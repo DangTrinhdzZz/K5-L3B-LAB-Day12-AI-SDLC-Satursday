@@ -89,11 +89,11 @@ class Serve(unittest.TestCase):
             self.assertEqual(last["tables"][0]["customer_id"], None)
             self.assertAlmostEqual(last["reputation"], 3.2, places=2)
 
-    def test_wrong_order_on_table_is_skipped(self):
+    def test_empty_hand_at_table_is_skipped(self):
         with Workdir() as w:
-            b = self._served_block()
-            b["hand"]["order_id"] = "C9"
-            rows = run_quan(w, b, inputs=[{"tick": 0, "interact": True}], ticks=3)
+            rows = run_quan(w, {"player": {"pos": [9, 3]}, "stock": {"ca_loc": 1}, "customers": [dict(C1)],
+                                "random_customers": False},
+                            inputs=[{"tick": 0, "interact": True}], ticks=3)
             self.assertEqual(events(rows, "served"), [])
 
 

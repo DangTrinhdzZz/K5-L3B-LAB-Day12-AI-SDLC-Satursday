@@ -68,6 +68,9 @@ class QuanSim:
         self.customers = [self._fixture_customer(c) for c in scenario.get("customers", [])]
         for e in self.customers:
             ids.reserve(e["id"])
+        over = {k: n for k, n in self._reserved_total().items() if n > self.stock.get(k, 0)}
+        if over:
+            raise BadInput(f"khách giữ chỗ quá tồn kho: {over}")
         self._fill_missing_reservations(scenario.get("customers", []))
         self.money = 0
         self.earned = 0

@@ -1,21 +1,24 @@
 # TEAM
 
-**Tên nhóm:** …  **Số người:** …  (khớp `team_size` trong `game.contract.json`)
+**Tên nhóm:** Satursday  **Số người:** 7  (khớp `team_size` trong `game.contract.json`; số người đã được giảng viên cho phép)
 
 | Thành viên | GitHub handle | Module chính | Vai quy trình | Người dự phòng cho |
 |---|---|---|---|---|
-| | | `sim/gather` | | |
-| | | `sim/quan` | | |
-| | | `client/ui` | | |
-| | | `qa` | | |
+| Trần Tuấn Anh | Tanh0406 | `sim/*` (khung luật gather + quan), `docs/contracts` | Integrator | mọi lát |
+| … | … | `sim/gather` lát 1 (oxy, ngạt) | QA lead | lát 2 |
+| … | … | `sim/gather` lát 1 (Máu, ngất, giỏ) | Scrum/Release | lát 1 |
+| … | … | `sim/gather` lát 2 (hái nút) | PO | lát 2 |
+| … | … | `sim/gather` lát 2 (bắt cá) | Dev | lát 1 |
+| … | … | `sim/quan` lát 3 (khách, kiên nhẫn) | Dev | lát 4 |
+| … | … | `sim/quan` lát 4 (bếp, phục vụ, tiền) + `client/ui` | Dev | lát 3 |
 
-**Vai quy trình:** PO (đầu mối hỏi giảng viên, giữ `docs/clarify.md`) · Integrator (giữ `docs/contracts/`, gắn tag) · QA lead · Scrum/Release. Có thể kiêm.
+**Vai quy trình:** PO (đầu mối hỏi Anh Năm / giảng viên, giữ `docs/clarify.md`) · Integrator (giữ `docs/contracts/`, gắn tag) · QA lead (giữ bộ test, `docs/verification/`) · Scrum/Release (theo dõi mốc, standup).
 
-## Thỏa thuận làm việc nhóm (điền trong 15 phút kickoff, ≤ 10 dòng)
+## Thỏa thuận làm việc nhóm
 
-- Kênh liên lạc: …
-- Khi bất đồng về thiết kế: … (ví dụ: nói 2 phút, không xong thì Integrator quyết và ghi lại lý do)
-- Khi ai đó trễ hoặc vướng quá 10 phút: … (ví dụ: nói ngay trong kênh, người dự phòng nhận việc)
-- Giờ standup giữa phase: …
-- Cách đọc code của nhau (tùy chọn): … (ví dụ: mỗi người đọc lát kế bên; PR hoặc xem trực tiếp)
-- Cách làm việc với Git: … (ví dụ: push thẳng nhánh chính / nhánh ngắn rồi gộp; thống nhất ai gắn tag)
+- Kênh liên lạc: nhóm chat của lớp (Zalo/Messenger) + issue trên GitHub cho việc dài.
+- Khi bất đồng về thiết kế: mỗi bên nói 2 phút, không xong thì Integrator quyết và ghi lý do vào `docs/clarify.md` hoặc ADR.
+- Khi ai đó trễ hoặc vướng quá 10 phút: báo ngay trong kênh, người dự phòng (cột cuối) nhận hỗ trợ.
+- Giờ standup giữa phase: phút 20 và phút 40 của mỗi phase, 2–3 phút, ghi `docs/standup.md`.
+- Cách đọc code của nhau: mỗi người đọc lát kế bên trước khi đẩy; sửa luật phải kèm test.
+- Cách làm việc với Git: commit nhỏ, `git pull --rebase` trước khi push thẳng `main`; chạy test trước khi đẩy; Integrator gắn tag `phase-n`.
