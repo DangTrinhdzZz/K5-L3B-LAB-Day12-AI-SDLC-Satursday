@@ -1,0 +1,16 @@
+# Bàn giao trong day: cùng tick đổi pha, không hao thêm; quán hao 0.25/s; Ngày 2 cấp id mới cho giỏ mẫu
+$ python3 -m chonoi.headless --mode day --days 2 --seed 1 --scenario day.json --inputs day-inputs.json --ticks 245 --snapshot-every 1 --out day.jsonl
+exit=0
+event 0 1 gather day_start {}
+event 0 1 gather phase_start {}
+event 1 1 gather gather_end {"reason": "docked", "inventory": {"items": [{"id": "I1", "kind": "ca_loc", "fresh": 99.992}, {"id": "I2", "kind": "bong_sung", "fresh": 99.992}, {"id": "I3", "kind": "bong_sung", "fresh": 99.992}]}}
+event 1 1 quan phase_start {}
+snapshot 1 day 1 quan stock [{"id": "I1", "kind": "ca_loc", "fresh": 99.992}, {"id": "I2", "kind": "bong_sung", "fresh": 99.992}, {"id": "I3", "kind": "bong_sung", "fresh": 99.992}]
+snapshot 2 day 1 quan stock [{"id": "I1", "kind": "ca_loc", "fresh": 99.987}, {"id": "I2", "kind": "bong_sung", "fresh": 99.987}, {"id": "I3", "kind": "bong_sung", "fresh": 99.987}]
+event 241 1 quan quan_end {"reason": "time", "money": 0, "earned": 0, "shift_earned": 0, "reputation": 3.0}
+event 241 1 shop phase_start {}
+snapshot 241 day 1 shop stock [{"id": "I1", "kind": "ca_loc", "fresh": 98.992}, {"id": "I2", "kind": "bong_sung", "fresh": 98.992}, {"id": "I3", "kind": "bong_sung", "fresh": 98.992}]
+event 243 2 shop shop_end {"reason": "done"}
+event 243 2 gather day_start {}
+event 243 2 gather phase_start {}
+snapshot 243 day 2 gather hold [{"id": "I4", "kind": "ca_loc", "fresh": 100}, {"id": "I5", "kind": "bong_sung", "fresh": 100}, {"id": "I6", "kind": "bong_sung", "fresh": 100}]

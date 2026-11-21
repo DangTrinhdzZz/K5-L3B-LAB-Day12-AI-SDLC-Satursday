@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, id_kind, items, read_jsonl, run_headless, snapshots, write_json
 
 
 def tuning():
@@ -35,17 +35,20 @@ class Kitchen(unittest.TestCase):
         t = tuning()
         cook = t["menu"]["ca_loc_nuong_trui"]["cook_s"] * 60
         with Workdir() as w:
-            rows = run_quan(w, {"player": {"pos": [2, 7]}, "stock": {"ca_loc": 1}, "customers": [dict(C1)],
+            rows = run_quan(w, {"player": {"pos": [2, 7]}, "stock": items("ca_loc"), "customers": [dict(C1)],
                                 "random_customers": False},
                             inputs=[{"tick": 0, "interact": True}, {"tick": 1, "interact": False},
                                     {"tick": cook + 1, "interact": True}], ticks=cook + 3, every=1)
             cs = events(rows, "cook_started")
             self.assertEqual(len(cs), 1)
             self.assertEqual(cs[0]["tick"], 1)
-            self.assertEqual(cs[0]["data"], {"stove_id": "B1", "order_id": "C1", "dish_id": "ca_loc_nuong_trui",
-                                             "items": ["ca_loc"], "base_price": 60})
+            # v1.2: items là mảng cá thể; giá chốt theo trung bình fresh (100 - 1/240 sau 1 tick) -> floor = 59
+            d = cs[0]["data"]
+            self.assertEqual((d["stove_id"], d["order_id"], d["dish_id"]), ("B1", "C1", "ca_loc_nuong_trui"))
+            self.assertEqual(id_kind(d["items"]), [("I1", "ca_loc")])
+            self.assertEqual(d["base_price"], 59)
             s1 = by_tick(rows)[1]
-            self.assertEqual(s1["stock"], {})
+            self.assertEqual(s1["stock"], [])
             self.assertEqual(s1["customers"][0]["order_status"], "assigned")
             self.assertEqual(s1["stoves"][0]["state"], "cooking")
             ready = events(rows, "dish_ready")
@@ -53,19 +56,19 @@ class Kitchen(unittest.TestCase):
             picked = events(rows, "dish_picked")
             self.assertEqual(picked[0]["tick"], cook + 2)
             s = by_tick(rows)[cook + 2]
-            self.assertEqual(s["hand"], {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 60})
+            self.assertEqual(s["hand"], {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 59})
             self.assertEqual(s["stoves"][0]["state"], "idle")
 
     def test_idle_stove_without_order_does_nothing(self):
         with Workdir() as w:
-            rows = run_quan(w, {"player": {"pos": [2, 7]}, "stock": {"ca_loc": 1}, "random_customers": False},
+            rows = run_quan(w, {"player": {"pos": [2, 7]}, "stock": items("ca_loc"), "random_customers": False},
                             inputs=[{"tick": 0, "interact": True}], ticks=3)
             self.assertEqual([r for r in rows if r["type"] == "event"], [])
 
 
 class Serve(unittest.TestCase):
     def _served_block(self):
-        c = dict(C1, order_status="assigned", reserved={}, base_price=60)
+        c = dict(C1, order_status="assigned", reserved=[], base_price=60)
         return {"player": {"pos": [9, 3]}, "customers": [c], "random_customers": False,
                 "hand": {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 60}}
 
@@ -91,7 +94,7 @@ class Serve(unittest.TestCase):
 
     def test_empty_hand_at_table_is_skipped(self):
         with Workdir() as w:
-            rows = run_quan(w, {"player": {"pos": [9, 3]}, "stock": {"ca_loc": 1}, "customers": [dict(C1)],
+            rows = run_quan(w, {"player": {"pos": [9, 3]}, "stock": items("ca_loc"), "customers": [dict(C1)],
                                 "random_customers": False},
                             inputs=[{"tick": 0, "interact": True}], ticks=3)
             self.assertEqual(events(rows, "served"), [])
@@ -100,7 +103,7 @@ class Serve(unittest.TestCase):
 class Customers(unittest.TestCase):
     def test_patience_runs_out(self):
         with Workdir() as w:
-            rows = run_quan(w, {"stock": {"ca_loc": 1}, "random_customers": False,
+            rows = run_quan(w, {"stock": items("ca_loc"), "random_customers": False,
                                 "customers": [dict(C1, patience_ticks_left=5)]}, ticks=10)
             left = events(rows, "customer_left")
             self.assertEqual(len(left), 1)
@@ -111,8 +114,9 @@ class Customers(unittest.TestCase):
 
     def test_missing_reserved_is_filled_from_recipe(self):
         with Workdir() as w:
-            rows = run_quan(w, {"stock": {"ca_loc": 2}, "random_customers": False, "customers": [dict(C1)]}, ticks=0)
-            self.assertEqual(snapshots(rows)[0]["customers"][0]["reserved"], {"ca_loc": 1})
+            rows = run_quan(w, {"stock": items("ca_loc", "ca_loc"), "random_customers": False,
+                                "customers": [dict(C1)]}, ticks=0)
+            self.assertEqual(snapshots(rows)[0]["customers"][0]["reserved"], ["I1"])
 
     def test_no_dish_when_stock_empty(self):
         with Workdir() as w:
@@ -122,7 +126,7 @@ class Customers(unittest.TestCase):
 
     def test_customer_arrives_and_reserves_recipe(self):
         with Workdir() as w:
-            rows = run_quan(w, {"stock": {"ca_loc": 5, "bong_sung": 4, "ca_linh": 3, "bong_dien_dien": 1}},
+            rows = run_quan(w, {"stock": items(*["ca_loc"] * 5, *["bong_sung"] * 4, *["ca_linh"] * 3, "bong_dien_dien")},
                             ticks=1200, every=100)
             arr = events(rows, "customer_arrived")
             self.assertGreaterEqual(len(arr), 1)
@@ -142,7 +146,7 @@ class Shift(unittest.TestCase):
             self.assertEqual(rows[-1]["score"], 0 + 100 * 3)
 
     def test_eating_customer_pays_at_closing(self):
-        c = dict(C1, state="eating", order_status="served", reserved={}, eat_ticks_left=500, base_price=60, tip=0)
+        c = dict(C1, state="eating", order_status="served", reserved=[], eat_ticks_left=500, base_price=60, tip=0)
         with Workdir() as w:
             rows = run_quan(w, {"time_left_ticks": 2, "customers": [c], "random_customers": False}, ticks=10)
             paid = events(rows, "paid")
@@ -151,7 +155,7 @@ class Shift(unittest.TestCase):
             self.assertEqual(paid[0]["tick"], 2)
 
     def test_quan_deterministic_bytes(self):
-        block = {"stock": {"ca_loc": 3, "bong_sung": 4, "ca_linh": 3, "bong_dien_dien": 1}}
+        block = {"stock": items(*["ca_loc"] * 3, *["bong_sung"] * 4, *["ca_linh"] * 3, "bong_dien_dien")}
         with Workdir() as w:
             run_quan(w, block, inputs=[{"tick": 0, "move": [-1, 1]}], ticks=2500, every=7, seed=9, out="a.jsonl")
             run_quan(w, block, inputs=[{"tick": 0, "move": [-1, 1]}], ticks=2500, every=7, seed=9, out="b.jsonl")

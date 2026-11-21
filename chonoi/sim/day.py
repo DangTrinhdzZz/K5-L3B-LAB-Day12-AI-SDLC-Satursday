@@ -7,12 +7,15 @@ Pha mới dựng ngay trong tick đổi pha và chỉ chạy gameplay từ bư�
 Xuyên Ngày: money, earned, reputation, cấp đã mua (`upgrades`). Chỉ khi dựng Ngày mới mới sao cấp đã mua sang
 `active_upgrades` (Máu / oxy tối đa của buổi sáng). Giỏ làm mới, kho dư bị bỏ sau Shop.
 DayIntro / EveningIntro / DayResult / Summary chỉ là màn hình của cửa sổ chơi, không phải pha headless.
+v1.2: bàn giao kho CÁ THỂ trong bộ nhớ ngay tick đổi pha (không hao thêm); hàng ở Shop không hao; Ngày đầu giữ
+nguyên id của mẫu gather.hold, các Ngày kế cấp id mới theo thứ tự mảng với kind / fresh ban đầu.
 
 step() trả danh sách (name, data, phase): event kết thúc mang pha cũ, event mở pha mang pha mới.
 """
 
 from ..contract import validate_plan_entry
-from ..ids import id_key
+from ..freshness import item_out
+from ..ids import id_key, sort_by_id
 from .gather import GatherSim
 from .quan import QuanSim
 
@@ -24,13 +27,13 @@ class ShopSim:
 
     def __init__(self, tuning, stock):
         self.time_left_ticks = tuning["shop"]["max_ticks"]
-        self.stock = {k: stock[k] for k in sorted(stock) if stock[k] > 0}
+        self.stock = sort_by_id(stock)  # cá thể dư từ ca quán, không hao trong Shop
         self.phase_tick = 0
         self.done = False
         self.reason = None
 
     def snapshot(self) -> dict:
-        return {"stock": dict(self.stock)}
+        return {"stock": [item_out(it) for it in self.stock]}
 
 
 class DaySim:
@@ -107,7 +110,7 @@ class DaySim:
         g = self.t["gather"]
         self.sub = GatherSim(self.t, self.tpl_gather, self.streams, self.ids, day=n,
                              hp_max=self._level_value("hp", g["hp_max"]),
-                             oxygen_max_s=self._level_value("oxygen", g["oxygen_max_s"]))
+                             oxygen_max_s=self._level_value("oxygen", g["oxygen_max_s"]), new_hold_ids=n > 1)
         plan = self.plan()
         return [("day_start", {}, "gather"),
                 ("day_plan", {"dishes": dict(plan["dishes"]), "ingredients": dict(plan["ingredients"])}, "gather"),

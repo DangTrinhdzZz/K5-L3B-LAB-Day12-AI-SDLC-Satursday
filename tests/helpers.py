@@ -45,6 +45,21 @@ def events(rows, name=None):
     return [r for r in rows if r["type"] == "event" and (name is None or r["name"] == name)]
 
 
+def items(*kinds, fresh=100, start=1):
+    """Kho / giỏ cá thể v1.2: items("ca_loc", "bong_sung") -> [{"id": "I1", ...}, {"id": "I2", ...}]."""
+    return [{"id": f"I{start + i}", "kind": k, "fresh": fresh} for i, k in enumerate(kinds)]
+
+
+def kinds_of(arr):
+    """Mảng cá thể -> mảng kind (giữ thứ tự)."""
+    return [it["kind"] for it in arr]
+
+
+def id_kind(arr):
+    """Mảng cá thể -> [(id, kind)] (so chính xác id và kind, độ tươi so riêng có dung sai)."""
+    return [(it["id"], it["kind"]) for it in arr]
+
+
 def close(a, b, tol=0.1):
     return abs(a - b) <= tol
 

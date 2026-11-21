@@ -4,7 +4,7 @@ import json
 import math
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, id_kind, items, kinds_of, read_jsonl, run_headless, snapshots, write_json
 
 
 def tuning():
@@ -37,7 +37,7 @@ class StandardNumbers(unittest.TestCase):
         with open("game.contract.json", encoding="utf-8") as f:
             c = json.load(f)
         t = c["tuning"]
-        self.assertEqual(c["contract_version"], "1.1")
+        self.assertEqual(c["contract_version"], "1.2")  # v1.2 (Ticket-03) giữ nguyên dữ liệu v1.1
         self.assertEqual(len(t["menu"]), 6)
         self.assertEqual([s["id"] for s in t["quan"]["stoves"]], ["B1", "B2"])
         self.assertEqual([s["id"] for s in t["quan"]["tables"]], ["T1", "T2", "T3", "T4"])
@@ -78,6 +78,14 @@ class FishSwim(unittest.TestCase):
             f = s[3]["fish"][0]
             self.assertLessEqual(f["pos"][1], 12)
             self.assertAlmostEqual(f["heading_deg"], 270, places=3)
+
+    def test_reflect_at_x_edge_flips_x_heading(self):
+        # Chạm mép x: phản xạ quãng còn lại và đảo thành phần hướng x (vuông góc với mép)
+        with Workdir() as w:
+            block = dict(NO_MONSTERS, **NO_NODES)
+            block["fish"] = [{"id": "F1", "kind": "ca_loc", "pos": [95.99, 14]}]
+            rows = run(w, "gather", block, ticks=3)
+            self.assertEqual(by_tick(rows)[3]["fish"][0]["heading_deg"], 180)
 
     def test_turn_on_swim_step_120(self):
         with Workdir() as w:
@@ -128,6 +136,18 @@ class Crocodile(unittest.TestCase):
             self.assertEqual(m["state"], "chase")
             self.assertLess(m["pos"][1], 24)
 
+    def test_chase_at_minimum_detection_depth(self):
+        scenario = dict(
+            NO_NODES,
+            random_fish=False,
+            player={"pos": [60, 10]},
+            monsters=[{"id": "M1", "kind": "ca_sau", "pos": [60, 15],
+                       "waypoints": [[60, 15], [64, 15]]}],
+        )
+        with Workdir() as w:
+            rows = run(w, "gather", scenario, ticks=2)
+            self.assertEqual(by_tick(rows)[1]["monsters"][0]["state"], "chase")
+
     def test_no_chase_when_player_shallow(self):
         with Workdir() as w:
             rows = run(w, "gather", dict(NO_NODES, random_fish=False, player={"pos": [60, 5]}), ticks=10)
@@ -135,7 +155,7 @@ class Crocodile(unittest.TestCase):
 
     def test_hit_loses_hp_drops_lifo_and_invuln(self):
         t = tuning()["gather"]
-        hold = ["ca_loc", "bong_sung", "ca_linh", "keo_neo"]
+        hold = items("ca_loc", "bong_sung", "ca_linh", "keo_neo")
         with Workdir() as w:
             rows = run(w, "gather", dict(NO_NODES, random_fish=False, hold=hold, player={"pos": [60, 23]}), ticks=3)
             hit = events(rows, "monster_hit")
@@ -143,9 +163,9 @@ class Crocodile(unittest.TestCase):
             self.assertEqual(hit[0]["tick"], 1)
             self.assertEqual(hit[0]["data"]["monster_id"], "M1")
             self.assertEqual(hit[0]["data"]["hp"], t["hp_max"] - 1)
-            self.assertEqual(hit[0]["data"]["lost"], ["keo_neo", "ca_linh"])
+            self.assertEqual(id_kind(hit[0]["data"]["lost"]), [("I4", "keo_neo"), ("I3", "ca_linh")])
             s = by_tick(rows)[1]
-            self.assertEqual(s["hold"], ["ca_loc", "bong_sung"])
+            self.assertEqual(kinds_of(s["hold"]), ["ca_loc", "bong_sung"])
             self.assertEqual(s["player"]["invuln_ticks"], t["monsters"]["invuln_ticks"])
             self.assertEqual(s["monsters"][0]["state"], "recoil")
             self.assertEqual(s["monsters"][0]["state_ticks_left"], t["monsters"]["species"]["ca_sau"]["recoil_ticks"])
@@ -162,13 +182,13 @@ class Crocodile(unittest.TestCase):
 
     def test_faint_by_monster(self):
         with Workdir() as w:
-            rows = run(w, "gather", dict(NO_NODES, random_fish=False, hold=["ca_loc", "bong_sung"],
+            rows = run(w, "gather", dict(NO_NODES, random_fish=False, hold=items("ca_loc", "bong_sung"),
                                          player={"pos": [60, 23], "hp": 1}), ticks=5)
             f = events(rows, "faint")
             self.assertEqual(len(f), 1)
             self.assertEqual(f[0]["data"]["cause"], "monster")
             self.assertEqual(f[0]["data"]["hp"], 0)
-            self.assertEqual(events(rows, "gather_end")[0]["data"], {"reason": "fainted", "inventory": {"items": {}}})
+            self.assertEqual(events(rows, "gather_end")[0]["data"], {"reason": "fainted", "inventory": {"items": []}})
 
     def test_bad_monster_fixture_exit_2(self):
         bad = [{"id": "M1", "kind": "ca_sau", "pos": [60, 5], "waypoints": [[60, 24], [64, 24]]},
@@ -184,7 +204,8 @@ class Crocodile(unittest.TestCase):
 
 class QuanV11(unittest.TestCase):
     def test_four_tables_two_stoves(self):
-        stock = {"ca_loc": 9, "bong_sung": 9, "ca_linh": 9, "bong_dien_dien": 9, "ca_keo": 9, "keo_neo": 9}
+        stock = items(*[k for k in ("ca_loc", "bong_sung", "ca_linh", "bong_dien_dien", "ca_keo", "keo_neo")
+                        for _ in range(9)])
         with Workdir() as w:
             rows = run(w, "quan", {"stock": stock}, ticks=4000, every=100)
             arr = events(rows, "customer_arrived")
@@ -194,20 +215,21 @@ class QuanV11(unittest.TestCase):
         rec = tuning()["menu"]["lau_mam"]["recipe"]
         c = {"id": "C1", "table_id": "T1", "dish_id": "lau_mam"}
         with Workdir() as w:
-            rows = run(w, "quan", {"player": {"pos": [5, 7]}, "stock": dict(rec), "customers": [c],
+            stock = items(*[k for k in sorted(rec) for _ in range(rec[k])])
+            rows = run(w, "quan", {"player": {"pos": [5, 7]}, "stock": stock, "customers": [c],
                                    "random_customers": False}, inputs=[{"tick": 0, "interact": True}], ticks=2)
             cs = events(rows, "cook_started")[0]["data"]
             self.assertEqual(cs["stove_id"], "B2")
-            self.assertEqual(cs["items"], ["bong_dien_dien", "ca_keo", "ca_linh", "ca_linh", "keo_neo"])
-            self.assertEqual(cs["base_price"], 200)
+            self.assertEqual(kinds_of(cs["items"]), ["bong_dien_dien", "ca_keo", "ca_linh", "ca_linh", "keo_neo"])
+            self.assertEqual(cs["base_price"], 199)  # v1.2: floor(200 × (100 - 1/240) / 100)
 
     def test_new_kinds_in_inventory_file(self):
         with Workdir() as w:
-            inv = write_json(w.path("inv.json"), {"items": {"ca_keo": 2, "keo_neo": 1}})
+            inv = write_json(w.path("inv.json"), {"items": items("ca_keo", "ca_keo", "keo_neo")})
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--inventory", inv,
                                      "--out", w.path("q.jsonl"))
             self.assertEqual(code, 0, err)
-            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], {"ca_keo": 2, "keo_neo": 1})
+            self.assertEqual(kinds_of(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"]), ["ca_keo", "ca_keo", "keo_neo"])
 
 
 if __name__ == "__main__":
