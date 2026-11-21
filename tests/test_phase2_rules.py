@@ -185,6 +185,23 @@ class Crocodile(unittest.TestCase):
 
 
 class QuanV11(unittest.TestCase):
+    def test_day_customers_are_restricted_to_day_plan(self):
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "gather": {"random_fish": False,
+                            "hold": ["ca_linh", "ca_linh", "ca_linh", "bong_dien_dien"]},
+                "quan": {"random_customers": True},
+            })
+            args = ["--mode", "day", "--seed", "1", "--ticks", "1200", "--scenario", sc,
+                    "--inputs", write_json(w.path("in.json"), frames({"tick": 0, "interact": True})),
+                    "--snapshot-every", "1", "--out", w.path("o.jsonl")]
+            code, err = run_headless(*args)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(w.path("o.jsonl"))
+            arrived = events(rows, "customer_arrived")
+            self.assertEqual(arrived, [])
+            self.assertGreaterEqual(len(events(rows, "no_dish")), 1)
+
     def test_four_tables_two_stoves(self):
         stock = {"ca_loc": 9, "bong_sung": 9, "ca_linh": 9, "bong_dien_dien": 9, "ca_keo": 9, "keo_neo": 9}
         with Workdir() as w:

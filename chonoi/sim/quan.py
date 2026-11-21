@@ -301,7 +301,7 @@ class QuanSim:
         if not free:
             return
         table = min(free, key=lambda tb: id_key(tb["id"]))
-        options = [d for d in sorted(self.menu) if self._can_make(self.menu[d]["recipe"])]
+        options = [d for d in self.allowed_dishes if self._can_make(self.menu[d]["recipe"])]
         if not options:
             events.append(("no_dish", {}))
             return
