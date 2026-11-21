@@ -15,11 +15,11 @@
 | AC-P4-08 Cảnh báo khách sắp giận: biểu tượng + chữ | chơi thử | hc-quan.png | Đạt ("! SẮP GIẬN" cạnh khách + banner 😠) |
 | AC-P4-09 Chế độ tương phản cao, chơi thử cả ba cảnh báo ở chế độ này | phím H / Cài đặt, `?hc=1` | hc-gather.png, hc-quan.png | Đạt |
 | AC-P4-10 CHANGELOG theo phase, release notes, bản đóng gói, CREDITS, LICENSE | đọc file; `python3 tools/package.py v1.0.0` | CHANGELOG.md, docs/release-notes-v1.0.0.md | Đạt ở commit; bản zip tạo lúc phát hành |
-| AC-P4-11 Tag `phase-4` và Release `v1.0.0` cùng trỏ commit trên `main` trước 3:00 | `git rev-parse phase-4 v1.0.0`, trang Release | | (Release/Integrator điền) |
+| AC-P4-11 Tag `phase-4` và Release `v1.0.0` cùng trỏ commit trên `main` trước 3:00 | `git rev-parse phase-4 v1.0.0`, trang Release | | Đạt: `phase-4` và `v1.0.0` cùng trỏ `1bd7a56` trên main; bản vá `v1.0.1` phát hành từ main |
 | AC-P4-12 Regression P1–P3 còn hiệu lực đạt | toàn bộ test | unittest.txt | Đạt: 139 OK (1 skip: bench thật, chạy riêng bằng CHONOI_RUN_BENCH=1 → đạt) |
 | AC-P4-13 Mở rộng leaderboard: khai extensions, cặp cờ, ghi một mục / lượt chuẩn, sắp + hòa, export | `Leaderboard` | summary-leaderboard.png | Đạt |
 | AC-P4-14 Mở rộng phụ đề SFX: phụ đề hiện đúng lúc khi tắt âm thanh | chơi thử `?sound=0` | captions.png | Đạt ("[tiếng cá quẫy]" lúc bắt cá) |
-| AC-P4-15 Retro rà hành động P2, phản tư cá nhân đủ người | đọc `docs/retro.md`, `docs/members/` | | (điều phối retro điền) |
+| AC-P4-15 Retro rà hành động P2, phản tư cá nhân đủ người | đọc `docs/retro.md`, `docs/members/` | | Đạt: `docs/retro.md` rà hành động sau P2; phản tư: xem `docs/members/` (thiếu bài của 4 bạn, tự bổ sung) |
 
 ## Đánh giá ngắn
 - Đạt: lệnh v1.3, bench, soak, clone sạch, cảnh báo + tương phản cao, 2 mở rộng, regression.
