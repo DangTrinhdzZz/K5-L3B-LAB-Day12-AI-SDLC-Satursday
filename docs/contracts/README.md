@@ -1,8 +1,117 @@
-# Hợp đồng tích hợp (nên chốt sớm; hình thức do nhóm chọn)
+# Hợp đồng tích hợp (chốt ở kickoff Phase 1)
 
-Điền trong 15 phút kickoff (hoặc thay bằng một mục trong README / một bảng trên giấy, miễn cả nhóm cùng thống nhất):
-1. **Schema file kho** — khớp mục G của PRD-0 (kho ghi khi `gather_end`) + một file kho mẫu hợp lệ: `inventory.sample.json`.
-2. **Giao diện giữa `sim/*` và `client/ui`** — trạng thái nào UI được đọc, lệnh nào UI gửi vào.
-3. **Danh sách sự kiện** — tên, `data`, ai phát, ai nghe (gather: `gather`, `node_regrown`, `hold_full`, `fish_caught`, `gather_end`...; quan: theo mục E của PRD-0).
+Đổi bất kỳ mục nào dưới đây: báo cả nhóm trong kênh và ghi lý do (ADR trong `docs/adr/` nếu ảnh hưởng nhiều module).
 
-Khi đổi hợp đồng sau này: báo cả nhóm và ghi lại lý do (ADR hoặc ghi chú, tùy chọn).
+## 1. File kho (gather → quan), PRD-0 mục G
+
+```json
+{"items": {"bong_sung": 2, "ca_loc": 1}}
+```
+
+- Chỉ có khóa gốc `items`: object `kind → số nguyên ≥ 0`. Kind hợp lệ: `ca_loc`, `ca_linh`, `bong_dien_dien`, `bong_sung`.
+- Bên ghi bỏ khóa có lượng 0, sắp khóa theo tên. Kho rỗng: `{"items":{}}`. Trần giỏ không áp lên kho quán.
+- `gather --inventory-out` ghi **đúng một lần** khi có `gather_end`, nội dung khớp `gather_end.data.inventory`. Ngất thì ghi kho rỗng. Chạm `--ticks` trước khi kết thúc thì không tạo / không ghi đè file. Ghi file tạm cùng thư mục rồi thay thế nguyên tử (`chonoi/inventory.py`).
+- `quan --inventory` đọc và từ chối sai schema, kind lạ, số âm → mã 2. Không được dùng cùng `scenario.quan.stock`.
+- Ví dụ hợp lệ: [`inventory.sample.json`](inventory.sample.json).
+
+## 2. Giao diện sim ↔ UI (`chonoi/sim/*` ↔ `chonoi/web/index.html`)
+
+- UI **chỉ đọc** snapshot qua `GET /state` (cùng trường với dòng snapshot của headless, thêm `meta` = tuning của mode, `events` = 40 event gần nhất, `finished`, `reason`, `error`).
+- UI **chỉ gửi** trạng thái phím qua `POST /input` `{"move":[a,b], "interact":bool, "catch":bool}`; `POST /restart` chơi lại.
+- Sim không biết gì về UI; mọi luật nằm trong `sim/*`, UI không tự tính luật (riêng "kho khả dụng" trên HUD = `stock − Σ customers[].reserved`, chỉ để hiển thị).
+
+| Mode | Trường UI đọc |
+|---|---|
+| chung | `tick`, `time_left_ticks`, `money`, `earned`, `reputation`, `score`, `state` |
+| gather | `player{pos, vel, heading_deg, oxygen_ticks, oxygen_max_ticks, hp, hp_max, zero_oxy_ticks, catch_cd_ticks, at_surface}`, `hold`, `hold_count`, `hold_capacity`, `nodes[]{id,kind,pos,ready,regrow_ticks}`, `fish[]{id,kind,pos,heading_deg}` |
+| quan | `player{pos, vel}`, `stock`, `hand`, `stoves[]{id,pos,state,dish,cook_ticks_left,ready_ticks}`, `tables[]{id,pos,customer_id}`, `customers[]{id,table_id,dish_id,order_tick,state,patience_ticks_left,eat_ticks_left,order_status,reserved,base_price,tip}` |
+
+Payload món (trên bếp `dish` và `hand`): `{"order_id", "dish_id", "base_price"}`, `order_id` = id khách.
+
+## 3. Sự kiện (PRD-0 mục E)
+
+| Tên | `data` | Ai phát |
+|---|---|---|
+| `gather` | `node_id, kind, amount` | gather (lát 2) |
+| `node_regrown` | `node_id` | gather (khung) |
+| `hold_full` | `action` (`gather`/`catch`), `node_id` hoặc `fish_id`, `required`, `free` | gather (lát 2) |
+| `fish_caught` | `fish_id, kind, yield` | gather (lát 2) |
+| `dive` / `surface` | `pos` sau di chuyển | gather (lát 1) |
+| `oxygen_empty` | `oxygen_ticks: 0` | gather (lát 1) |
+| `choke` | `hp` sau khi trừ | gather (lát 1) |
+| `faint` | `cause: "choke", lost` (mảng kind, LIFO), `hp: 0` | gather (lát 1) |
+| `gather_end` | `reason` (`time`/`docked`/`fainted`), `inventory` theo mục 1 | gather |
+| `customer_arrived` | `order_id, table_id, dish_id` | quan (lát 3) |
+| `no_dish` | `{}` | quan (lát 3) |
+| `cook_started` | `stove_id, order_id, dish_id, items` (mảng kind sắp theo kind), `base_price` | quan (lát 4) |
+| `dish_ready` / `dish_picked` | `stove_id, order_id, dish_id` | quan (lát 4) |
+| `served` | `order_id, table_id, dish_id, patience_ticks_left, base_price, tip` | quan (lát 4) |
+| `paid` | `order_id, table_id, base_price, tip, amount, reason` (`finished_eating`/`closing`) | quan (lát 4) |
+| `customer_left` | `order_id, table_id, reason` (`patience`/`closing`), `reputation` sau thay đổi | quan (lát 3) |
+| `quan_end` | `reason: "time", money, earned, shift_earned, reputation` | quan |
+
+Người nghe: runner ghi JSONL theo thứ tự xử lý; UI hiển thị 6 event cuối.
+
+---
+
+## 4. Thay đổi ở contract v1.1 (Phase 2, chốt lúc re-planning)
+
+**File kho:** schema giữ nguyên, thêm 2 kind `ca_keo`, `keo_neo` (tổng 6). Mode `day` bàn giao kho trong bộ nhớ;
+`--inventory` / `--inventory-out` chỉ dành cho hai mode độc lập.
+
+**CLI:** `--mode gather|quan|day`, `--days 1..5` (chỉ với day, mặc định 1).
+
+**Inputs:** nút mới `pause` (mọi mode), `shop_done` (Shop), `attack` / `photo` (mở rộng, chưa bật thì bỏ qua);
+`buy` là chuỗi khác rỗng, chỉ chạy ở frame khai báo (`oxygen`, `hp`; lệnh khác -> `buy_failed` reason `unknown`).
+
+**Pause:** xét cạnh `pause` trước; bước vào pause chỉ tăng `tick` và phát `paused`; khi còn pause, `sim_tick`,
+`phase_tick`, lịch và timer đứng yên; cạnh lên tiếp theo phát `resumed` rồi chạy gameplay ngay bước đó.
+
+**Snapshot thêm:** `state:"paused"`; gather: `monsters[]{id,kind,pos,waypoints,target_idx,state,state_ticks_left,recoil_dir}`,
+`fish[].age_ticks`; mode day (mọi pha): `day`, `day_plan{dishes,ingredients}`, `upgrades` (đã mua), `active_upgrades`
+(đang áp dụng); pha `shop`: `stock` dư từ ca + `time_left_ticks` tới lúc đóng. Snapshot đổi pha ghi pha mới, `phase_tick:0`.
+
+**Event thêm** (vỏ event của mode day có thêm `day`; event kết thúc mang pha cũ, `phase_start` mang pha mới):
+
+| Tên | `data` | Ai phát |
+|---|---|---|
+| `monster_hit` | `monster_id, hp, lost` (LIFO), `pos` người chơi | gather (`sim/monsters.py`) |
+| `fish_spawned` | `id, kind, pos` | gather (`sim/fish.py`) |
+| `faint` | thêm `cause:"monster"` | gather |
+| `day_start` / `phase_start` | `{}` | day |
+| `day_plan` | `dishes, ingredients` | day |
+| `paused` / `resumed` | `{}` | runner (Session) |
+| `bought` | `upgrade, level, price, money` | day (Shop) |
+| `buy_failed` | `action, reason` (`funds`/`max_level`/`unknown`) | day (Shop) |
+| `shop_end` | `reason` (`done`/`time`) | day (Shop) |
+
+Dòng `end` của day thêm `days_completed`; đủ Ngày thì `reason:"days_complete"`.
+
+**Giao diện sim <-> UI (thêm):** `GET /state` có `ui{screen, intro, stats, totals, menu, shop, days}`; `POST /input` nhận
+thêm `pause`, `shop_done`, `buy`; `POST /start | /menu | /quit | /skip` điều hướng menu / màn giới thiệu (không đi vào sim).
+
+---
+
+## 5. Contract v1.2 — kho cá thể và độ tươi (Phase 3, breaking change)
+
+Quyết định và bảng tác động: [`docs/adr/0001-kho-ca-the-v12.md`](../adr/0001-kho-ca-the-v12.md).
+
+**File kho / `gather_end.data.inventory` / snapshot `hold`, `stock`:**
+```json
+{"items": [{"id": "I1", "kind": "ca_linh", "fresh": 100}, {"id": "I2", "kind": "ca_loc", "fresh": 97.5}]}
+```
+- Đúng khóa gốc `items`, mảng cá thể; `id` chuỗi khác rỗng, duy nhất; `kind` thuộc 6 nguyên liệu; `fresh` hữu hạn
+  trong [0, 100]. Kho rỗng `{"items": []}`. File sắp theo id, fresh đủ độ chính xác để đọc lại giữ đúng nhánh ngưỡng 30.
+- File kho đếm `{"items": {kind: n}}` -> mã 2.
+- `hold` giữ thứ tự vào giỏ (LIFO khi mất hàng); `stock` (quán, Shop) sắp theo id.
+
+**Độ tươi:** tuning `freshness`; giỏ −0.5/s, kho quán −0.25/s (60 tick/s), kẹp 0; Shop và pause không hao; món
+chín không hao. Ươn: `fresh < spoiled_below`; event `spoiled {item_id, kind, location: hold|stock}` đúng một lần
+khi đi qua ngưỡng, nhiều cá thể cùng tick thì theo id.
+
+**Giữ chỗ / giá:** `customers[].reserved` là mảng id; mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id.
+Hàng giữ vừa ươn: nhả cả phần giữ, giữ lại đúng một lần (đơn theo order_tick rồi id bàn), thiếu -> unfulfillable.
+`cook_started.data.items` là mảng cá thể sắp theo kind rồi id; `base_price = floor(giá × TB fresh / 100)`.
+
+**Scenario:** `gather.hold`, `quan.stock` là mảng cá thể; mode day: Ngày 1 giữ id của mẫu `gather.hold`, Ngày kế
+cấp id mới theo thứ tự mảng.

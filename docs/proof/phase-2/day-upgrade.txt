@@ -1,0 +1,10 @@
+$ python3 -m chonoi.headless --mode day --seed 1 --days 3 --scenario upgrade.json --inputs upgrade-inputs.json --ticks 12 --snapshot-every 1 --out upgrade.jsonl
+exit=0
+event 0 1 day_start {}
+snapshot 0 day 1 upgrades {} active {} hp_max 3 oxygen_max_ticks 1800 money 700 earned 700
+event 3 1 bought {"upgrade": "hp", "level": 1, "price": 250, "money": 450}
+event 4 1 bought {"upgrade": "oxygen", "level": 1, "price": 200, "money": 250}
+event 5 1 buy_failed {"action": "oxygen", "reason": "funds"}
+event 6 2 shop_end {"reason": "done"}
+event 6 2 day_start {}
+snapshot 6 day 2 upgrades {'hp': 1, 'oxygen': 1} active {'hp': 1, 'oxygen': 1} hp_max 4 oxygen_max_ticks 2700 money 250 earned 700

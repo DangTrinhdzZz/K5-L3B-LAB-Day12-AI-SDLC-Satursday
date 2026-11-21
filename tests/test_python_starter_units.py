@@ -43,11 +43,22 @@ class Units(unittest.TestCase):
             with self.assertRaises(BadInput):
                 load_frames(write_json(w.path("i.json"), frames({"tick": 0, "move": [2, 0]})))
 
-    def test_catch_is_a_v10_button_and_attack_is_not(self):
+    def test_v11_buttons_accepted_unknown_rejected(self):
+        """v1.1: pause/shop_done/attack/photo là nút hợp lệ (attack/photo bị bỏ qua khi chưa bật mở rộng),
+        buy là chuỗi khác rỗng; nút lạ vẫn mã 2."""
         with Workdir() as w:
-            load_frames(write_json(w.path("i.json"), frames({"tick": 0, "catch": True})))
-            with self.assertRaises(BadInput):
-                load_frames(write_json(w.path("j.json"), frames({"tick": 0, "attack": True})))
+            load_frames(write_json(w.path("i.json"), frames({"tick": 0, "catch": True, "pause": True, "attack": True},
+                                                            {"tick": 1, "buy": "oxygen", "shop_done": True})))
+            for bad in ({"tick": 0, "dash": True}, {"tick": 0, "buy": ""}, {"tick": 0, "buy": 1}):
+                with self.assertRaises(BadInput):
+                    load_frames(write_json(w.path("j.json"), frames(bad)))
+
+    def test_buy_only_on_declared_frame(self):
+        with Workdir() as w:
+            pl = InputPlayer(load_frames(write_json(w.path("i.json"), frames({"tick": 1, "buy": "hp"}))))
+            self.assertIsNone(pl.advance(0).buy)
+            self.assertEqual(pl.advance(1).buy, "hp")
+            self.assertIsNone(pl.advance(2).buy)
 
     def test_live_inputs_keep_fast_tap_edge(self):
         li = LiveInputs()
@@ -62,7 +73,7 @@ class Units(unittest.TestCase):
 
     def test_session_steps_gather_and_dock(self):
         tuning = load_contract()["tuning"]
-        s = Session("gather", tuning, {"hold": ["ca_loc"]}, 1)
+        s = Session("gather", tuning, {"hold": [{"id": "I1", "kind": "ca_loc", "fresh": 100}]}, 1)
         self.assertEqual(s.snapshot()["tick"], 0)
         li = LiveInputs()
         self.assertEqual(s.step(li.advance()), [])
