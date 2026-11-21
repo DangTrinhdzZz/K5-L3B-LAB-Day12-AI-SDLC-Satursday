@@ -94,6 +94,18 @@ class Faint(unittest.TestCase):
             self.assertEqual(len(ev), 1)
             self.assertEqual(ev[0]["data"]["lost"], ["bong_sung", "ca_loc"])
 
+    def test_faint_empties_hold_and_inventory(self):
+        # PRD F/G: Máu 0 thì bỏ giỏ; gather_end fainted với kho rỗng; file kho ghi rỗng
+        with Workdir() as w:
+            inv = w.path("kho.json")
+            rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
+                                  "hold": ["ca_loc", "bong_sung"], "random_fish": False},
+                              ticks=100, inv_out=inv)
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["inventory"], {"items": {}})
+            self.assertEqual(snapshots(rows)[-1]["hold"], [])
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {}})
+
 
 class Harvest(unittest.TestCase):
     def test_gather_nearest_ready_node_at_surface(self):
