@@ -67,7 +67,7 @@ def update(t, monsters, player_pos):
             continue
         thr = sp["depths"][0]
         dist = math.dist(m["pos"], player_pos)
-        if m["state"] == "patrol" and player_pos[1] > thr and dist <= sp["detect_radius"]:
+        if m["state"] == "patrol" and player_pos[1] >= thr and dist <= sp["detect_radius"]:
             m["state"] = "chase"
         elif m["state"] == "chase" and (dist > sp["exit_radius"] or player_pos[1] < thr):
             m["state"] = "patrol"

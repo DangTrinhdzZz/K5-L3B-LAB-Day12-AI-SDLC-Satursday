@@ -128,6 +128,18 @@ class Crocodile(unittest.TestCase):
             self.assertEqual(m["state"], "chase")
             self.assertLess(m["pos"][1], 24)
 
+    def test_chase_at_minimum_detection_depth(self):
+        scenario = dict(
+            NO_NODES,
+            random_fish=False,
+            player={"pos": [60, 10]},
+            monsters=[{"id": "M1", "kind": "ca_sau", "pos": [60, 15],
+                       "waypoints": [[60, 15], [64, 15]]}],
+        )
+        with Workdir() as w:
+            rows = run(w, "gather", scenario, ticks=2)
+            self.assertEqual(by_tick(rows)[1]["monsters"][0]["state"], "chase")
+
     def test_no_chase_when_player_shallow(self):
         with Workdir() as w:
             rows = run(w, "gather", dict(NO_NODES, random_fish=False, player={"pos": [60, 5]}), ticks=10)
