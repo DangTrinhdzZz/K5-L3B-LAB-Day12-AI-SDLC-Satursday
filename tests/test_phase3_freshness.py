@@ -53,6 +53,14 @@ class GatherFreshness(unittest.TestCase):
             self.assertEqual(last["hold_count"], 2)
             self.assertTrue(all(it["fresh"] < 30 for it in last["hold"]))
 
+    def test_spoiled_threshold_exact_30_spoils_at_tick_1(self):
+        # Ticket-03 mục 1: ươn khi fresh < 30; cá thể đúng 30 chưa ươn, tụt dưới 30 ở bước đầu -> spoiled tick 1
+        with Workdir() as w:
+            sc = {"gather": {"hold": items("ca_linh", fresh=30), "random_fish": False, "monsters": []}}
+            rows = run(w, "gather", sc, ticks=1)
+            self.assertEqual([(e["tick"], e["data"]) for e in events(rows, "spoiled")],
+                             [(1, {"item_id": "I1", "kind": "ca_linh", "location": "hold"})])
+    
     def test_old_count_hold_rejected(self):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {"gather": {"hold": ["ca_loc"]}})
@@ -107,6 +115,14 @@ class QuanFreshness(unittest.TestCase):
             rows = run(w, "quan", {"quan": {"stock": items("ca_loc", fresh=50), "random_customers": False}},
                        ticks=240, every=240)
             self.assertAlmostEqual(at(rows, 240)["stock"][0]["fresh"], 49.0, places=2)
+
+    def test_stock_spoils_when_dropping_below_30_at_tick_61(self):
+        # Kho quán -0.25/s: 30.25 về đúng 30 ở tick 60 (chưa ươn), xuống dưới 30 ở tick 61 -> spoiled
+        with Workdir() as w:
+            rows = run(w, "quan", {"quan": {"stock": items("ca_loc", fresh=30.25), "random_customers": False}},
+                       ticks=70, every=70)
+            self.assertEqual([(e["tick"], e["data"]) for e in events(rows, "spoiled")],
+                             [(61, {"item_id": "I1", "kind": "ca_loc", "location": "stock"})])
 
     def test_spoiled_items_not_cookable(self):
         with Workdir() as w:
