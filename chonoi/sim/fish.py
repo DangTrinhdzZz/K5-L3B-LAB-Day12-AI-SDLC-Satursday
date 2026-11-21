@@ -83,7 +83,7 @@ def swim(t, fish, rng):
         x, fx = _reflect(f["pos"][0] + vx * step, xlo, xhi)
         d, fd = _reflect(f["pos"][1] + vd * step, dlo, dhi)
         if fx:
-            vd = -vd
+            vx = -vx  # chạm mép x: đảo thành phần vuông góc với mép (x)
         if fd:
             vd = -vd
         if fx or fd:
