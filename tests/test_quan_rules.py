@@ -116,6 +116,14 @@ class Customers(unittest.TestCase):
             self.assertAlmostEqual(by_tick(rows)[5]["reputation"], 2.5, places=2)
             self.assertEqual(by_tick(rows)[5]["customers"], [])
 
+    def test_customer_left_reports_updated_reputation(self):
+        with Workdir() as w:
+            rows = run_quan(w, {"stock": {"ca_loc": 1}, "random_customers": False,
+                                "customers": [dict(C1, patience_ticks_left=5)]}, ticks=10)
+            left = events(rows, "customer_left")
+            self.assertEqual(left[0]["data"]["reputation"], 2.5)
+            self.assertEqual(by_tick(rows)[5]["reputation"], 2.5)
+
     def test_missing_reserved_is_filled_from_recipe(self):
         with Workdir() as w:
             rows = run_quan(w, {"stock": {"ca_loc": 2}, "random_customers": False, "customers": [dict(C1)]}, ticks=0)
