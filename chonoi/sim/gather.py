@@ -145,7 +145,7 @@ class GatherSim:
         self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
         if prev > 0 and self.oxygen_ticks == 0:
             events.append(("oxygen_empty", {"oxygen_ticks": 0}))
-        if prev == 0:
+        if self.oxygen_ticks == 0:  # kể cả bước vừa chạm 0
             self.zero_oxy_ticks += 1
             if self.zero_oxy_ticks >= self.t["choke_interval_ticks"]:
                 self.zero_oxy_ticks = 0

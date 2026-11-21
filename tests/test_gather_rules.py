@@ -170,5 +170,12 @@ class OxygenBugfixes(unittest.TestCase):
                               inputs=[{"tick": 0, "move": [0, -1]}], ticks=30)
             self.assertEqual(by_tick(rows)[30]["player"]["zero_oxy_ticks"], 0)
 
+    def test_first_choke_at_t_plus_59(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"random_fish": False, "player": {"pos": [50, 10], "oxygen_ticks": 1}}, ticks=100)
+            self.assertEqual(events(rows, "oxygen_empty")[0]["tick"], 1)
+            self.assertEqual(events(rows, "choke")[0]["tick"], 60)
+
+            
 if __name__ == "__main__":
     unittest.main()
