@@ -116,6 +116,15 @@ class Serve(unittest.TestCase):
             self.assertEqual(len(events(rows, "paid")), 1)
             self.assertEqual(rows[-1]["reputation"], tuning()["quan"]["reputation_max"])
 
+    def test_money_and_earned_include_tip(self):
+        # PRD-0 E / Ticket-02: earned là tổng thu, gồm tiền món và boa
+        eat = tuning()["quan"]["eat_s"] * 60
+        with Workdir() as w:
+            rows = run_quan(w, self._served_block(), inputs=[{"tick": 0, "interact": True}], ticks=eat + 5, every=100)
+            paid = events(rows, "paid")[0]["data"]
+            self.assertEqual(paid["amount"], 72)
+            self.assertEqual((rows[-1]["money"], rows[-1]["earned"]), (72, 72))
+
 
 class Customers(unittest.TestCase):
     def test_customer_arrives_at_first_tick(self):
