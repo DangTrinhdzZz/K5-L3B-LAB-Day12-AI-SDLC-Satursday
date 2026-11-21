@@ -73,6 +73,15 @@ class Oxygen(unittest.TestCase):
 
 
 class Faint(unittest.TestCase):
+    def test_choke_reports_hp_after_damage(self):
+        # PRD E: choke ghi hp sau khi trừ (hp_max 3 -> choke đầu tiên ghi 2)
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0},
+                                  "random_fish": False}, ticks=100)
+            ev = events(rows, "choke")
+            self.assertEqual(ev[0]["data"], {"hp": tuning_gather()["hp_max"] - 1})
+            self.assertEqual(by_tick(rows)[ev[0]["tick"]]["player"]["hp"], ev[0]["data"]["hp"])
+
     def test_faint_ends_gather_with_reason_fainted(self):
         with Workdir() as w:
             rows = run_gather(w, {"player": {"pos": [50, 10], "oxygen_ticks": 0, "hp": 1},
