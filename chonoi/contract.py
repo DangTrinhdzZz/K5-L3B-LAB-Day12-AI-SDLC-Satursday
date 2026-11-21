@@ -1,4 +1,4 @@
-"""Đọc game.contract.json và kiểm dải hợp lệ của tuning (PRD-0 mục A, Ticket-02 mục 4.1, Ticket-03 — contract v1.2)."""
+"""Đọc game.contract.json và kiểm dải hợp lệ của tuning (PRD-0 mục A, Ticket-02 mục 4.1, Ticket-03, Ticket-04 — contract v1.3)."""
 
 import json
 import os
@@ -24,8 +24,14 @@ def load_contract(path=DEFAULT_PATH) -> dict:
             c = json.load(f)
     except (OSError, ValueError) as e:
         raise BadInput(f"không đọc được {path}: {e}")
-    if c.get("contract_version") != "1.2":
-        raise BadInput("contract_version phải là \"1.2\"")
+    if c.get("contract_version") != "1.3":
+        raise BadInput("contract_version phải là \"1.3\"")
+    for key in ("headless_cmd", "run_cmd", "build_cmd", "bench_cmd", "soak_cmd"):
+        if not isinstance(c.get(key), str) or not c[key].strip():
+            raise BadInput(f"{key} phải là lệnh (chuỗi khác rỗng) ở gốc game.contract.json")
+    ext = c.get("extensions", [])
+    if not isinstance(ext, list) or not all(isinstance(e, str) and e for e in ext) or len(set(ext)) != len(ext):
+        raise BadInput("extensions phải là mảng mã mở rộng (chuỗi, không trùng)")
     validate_tuning(c.get("tuning"))
     return c
 

@@ -360,8 +360,21 @@ function overlays() {
   if (html !== lastIntro) { $("introCard").innerHTML = html; lastIntro = html; }
 }
 
-function frame() {
+// ---------- chế độ benchmark (?bench=1&warmup=3&duration=30): chonoi.bench mở trang headless ----------
+const BQ = new URLSearchParams(location.search);
+const BENCH = BQ.get("bench") === "1" ? { warmup: +BQ.get("warmup") || 3, duration: +BQ.get("duration") || 30, first: null, stamps: [], sent: false } : null;
+function benchTick(ts) {
+  if (!BENCH || BENCH.sent || !snap) return;
+  if (BENCH.first === null) { BENCH.first = ts; post("/bench/first", {}); return; }  // khung đầu tiên của cảnh đo
+  const t = (ts - BENCH.first) / 1000;
+  if (t < BENCH.warmup) return;
+  BENCH.stamps.push(ts);
+  if (t >= BENCH.warmup + BENCH.duration) { BENCH.sent = true; post("/bench/result", { stamps: BENCH.stamps }); }
+}
+
+function frame(ts) {
   requestAnimationFrame(frame);
+  benchTick(ts);
   const [w, h] = fit();
   ctx.fillStyle = "#10161c"; ctx.fillRect(0, 0, w, h);
   if (!snap) { text(offline ? "Không kết nối được máy chủ…" : "Đang tải…", w / 2, h / 2, { align: "center" }); return; }

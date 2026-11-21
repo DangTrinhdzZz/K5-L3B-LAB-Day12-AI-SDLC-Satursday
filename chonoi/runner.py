@@ -57,10 +57,10 @@ class Session:
     def _score(self):
         return self.sim.earned + self.tuning["score"]["reputation_multiplier"] * math.floor(self.sim.reputation)
 
-    def _event(self, name, data, phase=None):
+    def _event(self, name, data, phase=None, day=None):
         row = {"type": "event", "tick": self.tick, "phase": phase or self.sim.phase}
         if self.mode == "day":
-            row["day"] = self.sim.day
+            row["day"] = self.sim.day if day is None else day
         row.update({"name": name, "data": data})
         return row
 

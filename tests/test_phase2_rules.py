@@ -37,7 +37,7 @@ class StandardNumbers(unittest.TestCase):
         with open("game.contract.json", encoding="utf-8") as f:
             c = json.load(f)
         t = c["tuning"]
-        self.assertEqual(c["contract_version"], "1.2")  # v1.2 (Ticket-03) giữ nguyên dữ liệu v1.1
+        self.assertEqual(c["contract_version"], "1.3")  # v1.3 (Ticket-04): gameplay giữ như v1.2, thêm bench_cmd / soak_cmd
         self.assertEqual(len(t["menu"]), 6)
         self.assertEqual([s["id"] for s in t["quan"]["stoves"]], ["B1", "B2"])
         self.assertEqual([s["id"] for s in t["quan"]["tables"]], ["T1", "T2", "T3", "T4"])

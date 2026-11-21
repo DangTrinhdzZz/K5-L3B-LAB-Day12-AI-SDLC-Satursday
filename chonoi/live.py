@@ -35,6 +35,7 @@ from .scenario import load_scenario
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 TICK_S = 1.0 / 60.0
 MAX_BODY = 4096
+MAX_BENCH_BODY = 4_000_000  # /bench/result mang thời điểm của mọi khung trong khoảng đo
 RECENT_EVENTS = 40
 INTRO_TICKS = 240  # 4 s
 BUY_COMMANDS = ("oxygen", "hp")
@@ -49,6 +50,7 @@ class LiveGame:
         self.tuning = tuning
         self.inventory_out = inventory_out
         self.screen = screen  # menu | game | quit
+        self.bench_sink = None  # chonoi.bench gắn vào để nhận khung đầu tiên / kết quả đo
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
@@ -232,7 +234,8 @@ class _Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             n = -1
-        if n < 0 or n > MAX_BODY:
+        limit = MAX_BENCH_BODY if path.startswith("/bench/") else MAX_BODY
+        if n < 0 or n > limit:
             self._send(400, b'{"error":"body sai"}')
             return
         raw = self.rfile.read(n) if n else b""
@@ -244,6 +247,9 @@ class _Handler(BaseHTTPRequestHandler):
                 self.game.set_input(body)
             elif path == "/restart":
                 self.game.restart()
+            elif path in ("/bench/first", "/bench/result") and self.game.bench_sink is not None:
+                body = json.loads(raw.decode("utf-8") or "{}")
+                self.game.bench_sink(path.rsplit("/", 1)[1], body if isinstance(body, dict) else {})
             elif path in ("/start", "/menu", "/quit", "/skip"):
                 self.game.ui(path[1:])
             else:
@@ -255,13 +261,22 @@ class _Handler(BaseHTTPRequestHandler):
         self._send(200, b'{"ok":true}')
 
 
+class _QuietServer(ThreadingHTTPServer):
+    """Bỏ qua lỗi kết nối bị trình duyệt đóng ngang (tắt tab, bench kết thúc); lỗi khác vẫn in ra."""
+
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], ConnectionError):
+            return
+        super().handle_error(request, client_address)
+
+
 class LiveServer:
     """Máy chủ + mô phỏng. port=0 -> cổng ngẫu nhiên (đọc `.port`)."""
 
     def __init__(self, game: LiveGame, host="127.0.0.1", port=8000):
         handler = type("Handler", (_Handler,), {"game": game})
         self.game = game
-        self.httpd = ThreadingHTTPServer((host, port), handler)
+        self.httpd = _QuietServer((host, port), handler)
         self.httpd.daemon_threads = True
         self.host = host
         self.port = self.httpd.server_address[1]

@@ -88,7 +88,8 @@ class DaySim:
     reputation = property(lambda s: s._live("reputation"), lambda s, v: setattr(s, "_reputation", v))
 
     def plan(self):
-        return self.plans[self.day]
+        """Kế hoạch của Ngày hiện tại; quá 5 Ngày (soak) thì D1–D5 lặp lại."""
+        return self.plans[(self.day - 1) % len(self.plans) + 1]
 
     def snapshot(self) -> dict:
         s = self.sub.snapshot()
@@ -130,7 +131,7 @@ class DaySim:
         return [("phase_start", {}, "shop")]
 
     def _close_shop(self, reason):
-        out = [("shop_end", {"reason": reason}, "shop")]
+        out = [("shop_end", {"reason": reason}, "shop", self.day)]  # event kết thúc mang Ngày cũ
         self.days_completed += 1
         if self.day >= self.days:
             self.sub.done = True
