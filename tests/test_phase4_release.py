@@ -104,5 +104,69 @@ class BenchMetrics(unittest.TestCase):
             self.assertGreater(b["frames"], 0)
 
 
+class Leaderboard(unittest.TestCase):
+    """Mở rộng `leaderboard` (Ticket-04 mục 3)."""
+
+    def _day5(self, w, *extra, out="d.jsonl", seed="42"):
+        return run_headless("--mode", "day", "--days", "5", "--seed", seed, "--ticks", "120000",
+                            "--out", w.path(out), *extra)
+
+    def test_declared_in_extensions(self):
+        self.assertIn("leaderboard", manifest().get("extensions", []))
+
+    def test_flag_pair_and_mode_exit_2(self):
+        with Workdir() as w:
+            out, lb = w.path("o.jsonl"), w.path("lb.json")
+            base = ("--seed", "1", "--ticks", "1", "--out", out)
+            self.assertEqual(run_headless("--mode", "day", *base, "--leaderboard", lb)[0], 2)
+            self.assertEqual(run_headless("--mode", "day", *base, "--player-name", "Út Sen")[0], 2)
+            self.assertEqual(run_headless("--mode", "gather", *base, "--leaderboard", lb, "--player-name", "A")[0], 2)
+            self.assertEqual(run_headless("--mode", "day", *base, "--leaderboard", lb, "--player-name", "")[0], 2)
+            self.assertFalse(os.path.exists(lb))
+
+    def test_standard_run_writes_once_ties_keep_order_and_jsonl_unchanged(self):
+        with Workdir() as w:
+            lb = w.path("lb.json")
+            code, err = self._day5(w, "--leaderboard", lb, "--player-name", "Út Sen", out="a.jsonl")
+            self.assertEqual(code, 0, err)
+            code, err = self._day5(w, "--leaderboard", lb, "--player-name", "Bé Hai", out="b.jsonl")
+            self.assertEqual(code, 0, err)
+            code, err = self._day5(w, out="c.jsonl")  # không cờ xếp hạng
+            self.assertEqual(code, 0, err)
+            with open(w.path("a.jsonl"), "rb") as a, open(w.path("c.jsonl"), "rb") as c:
+                self.assertEqual(a.read(), c.read(), "file xếp hạng không đổi JSONL")
+            end = read_jsonl(w.path("a.jsonl"))[-1]
+            code, _, err = run_cmd("run_cmd", "--export-leaderboard", w.path("x.json"), "--leaderboard", lb)
+            self.assertEqual(code, 0, err)
+            with open(w.path("x.json"), encoding="utf-8") as f:
+                entries = json.load(f)["entries"]
+            self.assertEqual([e["name"] for e in entries], ["Út Sen", "Bé Hai"], "hòa điểm: mục ghi trước đứng trước")
+            self.assertEqual(entries[0], {"name": "Út Sen", "score": end["score"], "days_completed": 5, "seed": 42})
+
+    def test_non_standard_runs_not_recorded(self):
+        with Workdir() as w:
+            lb = w.path("lb.json")
+            sc = write_json(w.path("sc.json"), {"gather": {"random_fish": False}})
+            self.assertEqual(self._day5(w, "--leaderboard", lb, "--player-name", "A", "--scenario", sc)[0], 0)
+            code, _ = run_headless("--mode", "day", "--days", "4", "--seed", "1", "--ticks", "100000",
+                                   "--out", w.path("o.jsonl"), "--leaderboard", lb, "--player-name", "A")
+            self.assertEqual(code, 0)
+            code, _ = run_headless("--mode", "day", "--days", "5", "--seed", "1", "--ticks", "100",
+                                   "--out", w.path("o.jsonl"), "--leaderboard", lb, "--player-name", "A")
+            self.assertEqual(code, 0)  # chạm --ticks trước khi xong 5 Ngày
+            self.assertFalse(os.path.exists(lb))
+
+    def test_top10_sorted_desc(self):
+        from chonoi import leaderboard
+        with Workdir() as w:
+            lb = w.path("lb.json")
+            for i, score in enumerate([5, 9, 1, 9, 7, 3, 8, 2, 6, 4, 10, 0]):
+                leaderboard.add(lb, f"P{i}", score, 5, i)
+            entries = leaderboard.load(lb)
+            self.assertEqual(len(entries), 10)
+            self.assertEqual([e["score"] for e in entries], [10, 9, 9, 8, 7, 6, 5, 4, 3, 2])
+            self.assertEqual([e["name"] for e in entries[1:3]], ["P1", "P3"])
+
+
 if __name__ == "__main__":
     unittest.main()

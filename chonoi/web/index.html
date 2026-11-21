@@ -17,6 +17,16 @@
   .btn { display: block; width: 100%; margin: 10px 0; padding: 12px; font-size: 20px; border-radius: 8px; border: 0; background: #e8892b; color: #111; cursor: pointer; }
   .btn.sec { background: #46525e; color: #e8eef2; }
   .hint { color: #9fb3c0; font-size: 18px; }
+  .set { display: flex; gap: 8px; margin-top: 6px; }
+  .set .btn { margin: 4px 0; font-size: 18px; padding: 8px; }
+  .lb { text-align: left; margin: 8px auto; font-size: 18px; }
+  .lb td { padding: 2px 10px; }
+  input.name { font-size: 20px; padding: 8px; width: 70%; border-radius: 6px; border: 2px solid #c9a36b; }
+  body.hc .card { background: #000; border: 4px solid #fff; color: #fff; }
+  body.hc .card h1, body.hc .card h2 { color: #ffff00; }
+  body.hc .btn { background: #ffff00; color: #000; border: 3px solid #fff; font-weight: bold; }
+  body.hc .btn.sec { background: #000; color: #fff; }
+  body.hc .hint { color: #fff; }
 </style>
 </head>
 <body>
@@ -26,11 +36,15 @@
   <p class="hint">Út Sen lặn bắt cá, hái bông trên sông Chín Khúc rồi tối mở quán trên nhà bè của Má Tư.</p>
   <button class="btn" id="bPlay">Chơi</button>
   <button class="btn sec" id="bQuit">Thoát</button>
+  <div class="set"><button class="btn sec" data-set="hc"></button><button class="btn sec" data-set="sound"></button><button class="btn sec" data-set="captions"></button></div>
+  <p class="hint">Phím tắt: H tương phản cao · M âm thanh · C phụ đề</p>
 </div></div>
 <div class="ov" id="pause"><div class="card">
   <h2>Tạm dừng</h2>
   <button class="btn" id="bResume">Tiếp tục</button>
   <button class="btn sec" id="bToMenu">Về menu</button>
+  <p class="hint">Cài đặt</p>
+  <div class="set"><button class="btn sec" data-set="hc"></button><button class="btn sec" data-set="sound"></button><button class="btn sec" data-set="captions"></button></div>
   <p class="hint">Esc / P để tiếp tục</p>
 </div></div>
 <div class="ov" id="intro"><div class="card" id="introCard"></div></div>
@@ -89,6 +103,7 @@ function tapPause() { down.add("pause"); pushInput(); down.delete("pause"); push
 const ui = () => (snap && snap.ui) || {};
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
+  if (e.target.tagName === "INPUT") return;
   if (e.repeat) { if (k === " " || k.startsWith("arrow")) e.preventDefault(); return; }
   const u = ui();
   if (u.screen !== "game") return;
@@ -117,6 +132,84 @@ $("bPlay").onclick = () => { post("/start"); lastSent = ""; down.clear(); };
 $("bQuit").onclick = () => post("/quit");
 $("bResume").onclick = () => tapPause();
 $("bToMenu").onclick = () => { post("/menu"); down.clear(); };
+
+// ---------- cài đặt: tương phản cao, âm thanh, phụ đề (lưu giữa các lần mở game) ----------
+const SET = { hc: false, sound: true, captions: true };
+try { Object.assign(SET, JSON.parse(localStorage.getItem("chonoi.settings") || "{}")); } catch (e) { /* bỏ qua */ }
+if (new URLSearchParams(location.search).get("hc") === "1") SET.hc = true;  // ?hc=1: bật sẵn tương phản cao
+if (new URLSearchParams(location.search).get("sound") === "0") SET.sound = false;  // ?sound=0: tắt âm thanh (kiểm phụ đề)
+const SET_LABEL = { hc: ["Tương phản cao: Tắt", "Tương phản cao: Bật"], sound: ["Âm thanh: Tắt", "Âm thanh: Bật"], captions: ["Phụ đề: Tắt", "Phụ đề: Bật"] };
+function applySettings() {
+  document.body.classList.toggle("hc", SET.hc);
+  document.querySelectorAll("[data-set]").forEach((b) => (b.textContent = SET_LABEL[b.dataset.set][SET[b.dataset.set] ? 1 : 0]));
+  try { localStorage.setItem("chonoi.settings", JSON.stringify(SET)); } catch (e) { /* bỏ qua */ }
+}
+function toggleSetting(k) { SET[k] = !SET[k]; applySettings(); }
+document.querySelectorAll("[data-set]").forEach((b) => (b.onclick = () => toggleSetting(b.dataset.set)));
+applySettings();
+addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (e.repeat || e.target.tagName === "INPUT") return;
+  if (k === "h") toggleSetting("hc"); else if (k === "m") toggleSetting("sound"); else if (k === "c") toggleSetting("captions");
+});
+
+// ---------- âm thanh (WebAudio, tự tổng hợp) + phụ đề SFX ----------
+const SFX = {
+  dive: [220, "[tiếng nước ùm]"], surface: [520, "[tiếng phà hơi]"], gather: [660, "[tiếng ngắt bông]"],
+  fish_caught: [740, "[tiếng cá quẫy]"], hold_full: [180, "[tiếng giỏ đầy]"], oxygen_empty: [140, "[tiếng báo hết hơi]"],
+  choke: [120, "[tiếng sặc nước]"], monster_hit: [90, "[tiếng Cá Sấu đớp]"], faint: [70, "[tiếng ngất lịm]"],
+  spoiled: [300, "[tiếng ruồi vo ve: hàng ươn]"], fish_spawned: [880, "[tiếng nước lăn tăn]"],
+  customer_arrived: [600, "[tiếng chào khách]"], cook_started: [330, "[tiếng xèo xèo]"], dish_ready: [990, "[tiếng chuông bếp]"],
+  served: [520, "[tiếng đặt dĩa]"], paid: [1200, "[tiếng tiền rơi leng keng]"], customer_left: [160, "[tiếng khách càu nhàu]"],
+  no_dish: [200, "[tiếng thở dài: hết món]"], bought: [1100, "[tiếng chuông mua hàng]"], buy_failed: [150, "[tiếng từ chối]"],
+};
+let audio = null, lastEvTick = -1;
+const captions = [];
+function beep(freq) {
+  if (!SET.sound) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = freq; o.type = "triangle";
+    g.gain.setValueAtTime(0.12, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.25);
+    o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.26);
+  } catch (e) { /* trình duyệt chặn âm thanh: phụ đề vẫn hiện */ }
+}
+function onEvents(evs) {
+  // chỉ xử lý event mới (tick lớn hơn lần trước); restart thì tick quay về nhỏ -> đặt lại
+  if (evs.length && evs[evs.length - 1].tick < lastEvTick) lastEvTick = -1;
+  evs.forEach((e) => {
+    if (e.tick <= lastEvTick) return;
+    const sfx = SFX[e.name];
+    if (!sfx) return;
+    beep(sfx[0]);
+    captions.push({ text: sfx[1], until: performance.now() + 2500 });
+  });
+  if (evs.length) lastEvTick = Math.max(lastEvTick, evs[evs.length - 1].tick);
+}
+function drawCaptions(w, h) {
+  const now = performance.now();
+  while (captions.length && captions[0].until < now) captions.shift();
+  if (!SET.captions) return;
+  captions.slice(-3).forEach((c, i, arr) => {
+    const y = h - 110 - (arr.length - 1 - i) * 34;
+    ctx.font = "bold 20px system-ui, sans-serif";
+    const tw = ctx.measureText(c.text).width + 24;
+    ctx.fillStyle = SET.hc ? "#000" : "rgba(0,0,0,.7)"; ctx.fillRect(w / 2 - tw / 2, y - 24, tw, 32);
+    if (SET.hc) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(w / 2 - tw / 2, y - 24, tw, 32); }
+    text(c.text, w / 2, y, { align: "center", bold: true, size: 20, color: SET.hc ? "#ffff00" : "#fff" });
+  });
+}
+
+// ---------- cảnh báo dễ nhận biết: biểu tượng + chữ, hộp nổi; tương phản cao: vàng trên đen, viền trắng dày ----------
+function warn(icon, msg, y, color) {
+  const label = icon + " " + msg;
+  ctx.font = "bold 26px system-ui, sans-serif";
+  const tw = ctx.measureText(label).width + 36, x = cv.clientWidth / 2 - tw / 2;
+  ctx.fillStyle = SET.hc ? "#000" : "rgba(20,0,30,.78)"; ctx.fillRect(x, y - 30, tw, 42);
+  ctx.strokeStyle = SET.hc ? "#fff" : color; ctx.lineWidth = SET.hc ? 4 : 2; ctx.strokeRect(x, y - 30, tw, 42); ctx.lineWidth = 1;
+  text(label, cv.clientWidth / 2, y, { align: "center", bold: true, size: 26, color: SET.hc ? "#ffff00" : color });
+}
 
 // ---------- ra: poll snapshot ----------
 async function poll() {
@@ -178,9 +271,10 @@ function drawGather(w, h) {
   const s = Math.max(1, Math.min((w - 20) / (X + 4), (h - top - bottom) / (D + SKY + 1)));
   const ox = (w - s * (X + 4)) / 2 + 2 * s, oy = top + SKY * s;
   const sx = (x) => ox + x * s, sy = (d) => oy + d * s;
-  ctx.fillStyle = "#f6d6c8"; ctx.fillRect(0, top, w, SKY * s);                     // ánh hồng buổi sớm
+  ctx.fillStyle = SET.hc ? "#000" : "#f6d6c8"; ctx.fillRect(0, top, w, SKY * s);   // ánh hồng buổi sớm
   const g = ctx.createLinearGradient(0, oy, 0, sy(D));
-  g.addColorStop(0, "#b08a4e"); g.addColorStop(0.35, "#6f6a3a"); g.addColorStop(1, "#1d2a22");  // nước phù sa
+  if (SET.hc) { g.addColorStop(0, "#00205a"); g.addColorStop(1, "#000814"); }
+  else { g.addColorStop(0, "#b08a4e"); g.addColorStop(0.35, "#6f6a3a"); g.addColorStop(1, "#1d2a22"); }  // nước phù sa
   ctx.fillStyle = g; ctx.fillRect(sx(0), oy, X * s, D * s);
   ctx.strokeStyle = "#fff1d6"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx(0), oy); ctx.lineTo(sx(X), oy); ctx.stroke();
   [[10, "giữa"], [20, "sâu"]].forEach(([d, n]) => { ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.beginPath(); ctx.moveTo(sx(0), sy(d)); ctx.lineTo(sx(X), sy(d)); ctx.stroke(); text(`${d} m · ${n}`, sx(0) + 6, sy(d) - 4, { color: "rgba(255,255,255,.45)" }); });
@@ -233,10 +327,13 @@ function drawGather(w, h) {
   }
   if (p.catch_cd_ticks > 0) text("Hồi bắt " + (p.catch_cd_ticks / 60).toFixed(1) + "s", 300, 62, { color: "#9fb3c0" });
   text(`Tiền ${snap.money ?? 0}k · uy tín ${(snap.reputation ?? 0).toFixed(1)}`, w - 12, 32, { align: "right" });
-  if (p.oxygen_ticks === 0 && !p.at_surface) text("Hết hơi!", w / 2, top + 40, { align: "center", size: 30, bold: true, color: blink() ? "#ff5252" : "#ffd0d0" });
+  let wy = top + 44;
+  if (p.oxygen_ticks === 0 && !p.at_surface) { warn("🫁", "HẾT HƠI! Nổi lên ngay", wy, blink() ? "#ff5252" : "#ffd0d0"); wy += 50; }
+  else if (p.oxygen_max_ticks && !p.at_surface && p.oxygen_ticks < p.oxygen_max_ticks * 0.25) { warn("⚠", "Oxy sắp hết, nổi lên!", wy, "#ff8a65"); wy += 50; }
   if (monsterNear) {
-    ctx.strokeStyle = "#a64dff"; ctx.lineWidth = 10; ctx.strokeRect(5, 5, w - 10, h - 10); ctx.lineWidth = 1;
-    text("Thủy quái!", w / 2, top + 76, { align: "center", size: 30, bold: true, color: "#d9a6ff" });
+    ctx.strokeStyle = SET.hc ? (blink() ? "#ffff00" : "#ff00ff") : "#a64dff"; ctx.lineWidth = SET.hc ? 16 : 10;
+    ctx.strokeRect(5, 5, w - 10, h - 10); ctx.lineWidth = 1;
+    warn("🐊", "Thủy quái gần!", wy, "#d9a6ff");
   }
   // giỏ theo loại + cần lấy
   const have = counts(snap.hold, true), cap = snap.hold_capacity || 12, y0 = h - bottom + 28;
@@ -257,7 +354,7 @@ function drawQuan(w, h) {
   const s = Math.max(1, Math.min((w - 40) / X, (h - top - bottom) / Z));
   const ox = (w - s * X) / 2, oy = top;
   const sx = (x) => ox + x * s, sy = (z) => oy + (Z - z) * s;
-  ctx.fillStyle = "#c9a36b"; ctx.fillRect(sx(0), sy(Z), X * s, Z * s);
+  ctx.fillStyle = SET.hc ? "#1a1206" : "#c9a36b"; ctx.fillRect(sx(0), sy(Z), X * s, Z * s);
   ctx.strokeStyle = "#6b4a2b"; ctx.lineWidth = 4; ctx.strokeRect(sx(0), sy(Z), X * s, Z * s); ctx.lineWidth = 1;
   for (let i = 0; i <= X; i += 2) { ctx.fillStyle = i % 4 ? "#ffd75e" : "#ffb347"; ctx.beginPath(); ctx.arc(sx(i), sy(Z) + 4, 4, 0, Math.PI * 2); ctx.fill(); } // đèn dây
   (snap.stoves || []).forEach((st) => {
@@ -271,7 +368,7 @@ function drawQuan(w, h) {
     }
     if (st.state === "ready") text("chín!", sx(st.pos[0]), sy(st.pos[1]) + 1.5 * s, { align: "center", bold: true, color: "#1b3a12" });
   });
-  const patMax = (meta.patience_s || 60) * 60, byTable = {};
+  const patMax = (meta.patience_s || 60) * 60, byTable = {}, angry = [], angryAt = [];
   (snap.customers || []).forEach((c) => (byTable[c.table_id] = c));
   (snap.tables || []).forEach((tb) => {
     ctx.fillStyle = "#8a5a2e"; ctx.beginPath(); ctx.arc(sx(tb.pos[0]), sy(tb.pos[1]), 0.9 * s, 0, Math.PI * 2); ctx.fill();
@@ -280,8 +377,9 @@ function drawQuan(w, h) {
     if (c) {
       const cx = sx(tb.pos[0]), cy = sy(tb.pos[1]) - 1.4 * s, frac = c.patience_ticks_left / patMax;
       ctx.fillStyle = c.state === "eating" ? "#7bc67b" : "#f4b6c2"; ctx.beginPath(); ctx.arc(cx, cy, 0.5 * s, 0, Math.PI * 2); ctx.fill();
-      text(dn(c.dish_id), cx, cy - 0.7 * s, { align: "center", color: "#2a1a0a" });
+      text(dn(c.dish_id), cx, cy - 0.7 * s, { align: "center", color: SET.hc ? "#fff" : "#2a1a0a" });
       if (c.state === "waiting") bar(cx - 1.1 * s, cy + 0.6 * s, 2.2 * s, 10, frac, frac < 0.25 ? (blink() ? "#e53935" : "#ff8a80") : "#66bb6a");
+      if (c.state === "waiting" && frac < 0.25) { angry.push(tb.id); angryAt.push([cx + 0.7 * s, cy]); }
     }
   });
   const p = snap.player;
@@ -304,6 +402,15 @@ function drawQuan(w, h) {
   const parts = Object.keys(byKind).map((k) => { const b = byKind[k]; return `${kn(k)} ${b.free}` + (b.n ? ` (${Math.round(b.sum / b.n)}%)` : "") + (b.spoiled ? ` +${b.spoiled} ươn` : ""); });
   text("Kho khả dụng: " + (parts.join(", ") || "(trống)"), 14, 62, { color: "#cfd8dc" });
   text("Trên tay: " + (snap.hand ? `${dn(snap.hand.dish_id)} (${snap.hand.base_price}k)` : "(trống)"), 14, 88, { color: "#ffe9a8" });
+  // nhãn "SẮP GIẬN" cạnh từng khách, vẽ sau cùng để không bị bàn / người chơi che
+  angryAt.forEach(([x, y]) => {
+    ctx.font = "bold 20px system-ui, sans-serif";
+    const lw = ctx.measureText("! SẮP GIẬN").width + 16;
+    ctx.fillStyle = SET.hc ? "#000" : "#b71c1c"; ctx.fillRect(x, y - 15, lw, 30);
+    if (SET.hc) { ctx.strokeStyle = "#ffff00"; ctx.lineWidth = 3; ctx.strokeRect(x, y - 15, lw, 30); ctx.lineWidth = 1; }
+    text("! SẮP GIẬN", x + lw / 2, y + 7, { align: "center", bold: true, size: 20, color: SET.hc ? "#ffff00" : "#fff" });
+  });
+  if (angry.length) warn("😠", `Khách bàn ${angry.join(", ")} sắp giận!`, h - 70, "#ff8a80");
 }
 
 // ----- SHOP -----
@@ -345,9 +452,22 @@ function introHtml() {
   if (it.kind === "summary") {
     const by = (u.totals || {}).served_by_dish || {}, best = Object.keys(by).sort((a, b) => by[b] - by[a])[0];
     return `<h1>Tổng kết</h1><p>Tổng tiền thu: ${snap.earned}k · còn ${snap.money}k</p><p>Tổng điểm: ${snap.score} · Uy tín ${(snap.reputation ?? 0).toFixed(1)}</p>
-      <p>Món bán chạy: ${best ? dn(best) + " (" + by[best] + " suất)" : "(chưa bán món nào)"}</p><button class="btn" onclick="fetch('/menu',{method:'POST'})">Về menu</button>`;
+      <p>Món bán chạy: ${best ? dn(best) + " (" + by[best] + " suất)" : "(chưa bán món nào)"}</p>${leaderboardHtml(u.leaderboard)}<button class="btn" onclick="fetch('/menu',{method:'POST'})">Về menu</button>`;
   }
   return "";
+}
+function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function leaderboardHtml(lb) {
+  if (!lb) return "";
+  const rows = lb.entries.map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}</td><td>${e.score}</td><td>seed ${e.seed}</td></tr>`).join("");
+  const form = lb.eligible && !lb.saved
+    ? `<p><input class="name" id="lbName" maxlength="24" placeholder="Tên của bạn" value="Út Sen"> <button class="btn" style="display:inline-block;width:auto" onclick="saveScore()">Lưu điểm</button></p>`
+    : lb.saved ? `<p class="hint">Đã lưu vào bảng xếp hạng.</p>` : `<p class="hint">Chỉ lượt chuẩn 5 Ngày (không scenario) mới được ghi bảng xếp hạng.</p>`;
+  return `<h2>Bảng xếp hạng</h2><table class="lb">${rows || "<tr><td>(chưa có ai)</td></tr>"}</table>${form}`;
+}
+function saveScore() {
+  const name = ($("lbName") && $("lbName").value || "").trim();
+  if (name) post("/leaderboard", { name });
 }
 let lastIntro = "";
 function overlays() {
@@ -357,7 +477,8 @@ function overlays() {
   $("pause").classList.toggle("on", u.screen === "game" && snap.state === "paused");
   const html = u.screen === "game" ? introHtml() : "";
   $("intro").classList.toggle("on", !!html);
-  if (html !== lastIntro) { $("introCard").innerHTML = html; lastIntro = html; }
+  // không vẽ lại thẻ khi đang gõ tên (giữ con trỏ trong ô nhập)
+  if (html !== lastIntro && document.activeElement?.id !== "lbName") { $("introCard").innerHTML = html; lastIntro = html; }
 }
 
 // ---------- chế độ benchmark (?bench=1&warmup=3&duration=30): chonoi.bench mở trang headless ----------
@@ -376,12 +497,14 @@ function frame(ts) {
   requestAnimationFrame(frame);
   benchTick(ts);
   const [w, h] = fit();
-  ctx.fillStyle = "#10161c"; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = SET.hc ? "#000" : "#10161c"; ctx.fillRect(0, 0, w, h);
   if (!snap) { text(offline ? "Không kết nối được máy chủ…" : "Đang tải…", w / 2, h / 2, { align: "center" }); return; }
   if (snap.phase === "shop") drawShop(w, h); else if (snap.phase === "quan") drawQuan(w, h); else drawGather(w, h);
   if (snap.day) text(`Ngày ${snap.day}${ui().days ? "/" + ui().days : ""}`, w / 2, 32, { align: "center", bold: true, color: "#ffd27a" });
+  if (!BENCH) onEvents(snap.events || []);
   eventLog(w, h);
-  text("WASD đi/bơi · E tương tác · Space bắt cá · Esc/P tạm dừng · R chơi lại", w - 12, h - 14, { align: "right", color: "#9fb3c0" });
+  drawCaptions(w, h);
+  text("WASD · E · Space · Esc/P tạm dừng · H tương phản · M âm thanh · C phụ đề · R chơi lại", w - 12, h - 14, { align: "right", color: SET.hc ? "#fff" : "#9fb3c0" });
   if (offline) text("Mất kết nối tới máy chủ", w / 2, 60, { align: "center", color: "#ff8a80" });
   if (snap.error) text("Luật báo lỗi — xem terminal. R để chơi lại.", w / 2, 84, { align: "center", color: "#ff8a80" });
   if (snap.finished && snap.mode !== "day") text("Buổi kết thúc: " + (snap.reason || "") + " — R để chơi lại", w / 2, h / 2, { align: "center", size: 26, bold: true });
