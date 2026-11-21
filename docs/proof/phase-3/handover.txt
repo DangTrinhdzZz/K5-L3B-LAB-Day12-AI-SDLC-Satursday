@@ -1,0 +1,16 @@
+# Smoke bàn giao kho cá thể (Ticket-03 mục 1): cập bến frame 0, quán đọc file với --ticks 0
+$ python3 -m chonoi.headless --mode gather --seed 1 --scenario dock.json --inputs dock-inputs.json --ticks 1 --out gather.jsonl --inventory-out kho.json
+exit=0
+$ cat kho.json
+{"items":[{"id":"I1","kind":"ca_linh","fresh":99.99166666666666}]}
+$ python3 -m chonoi.headless --mode quan --seed 1 --inventory kho.json --ticks 0 --out quan.jsonl
+exit=0
+$ (so snapshot quán tick 0 với file: id, kind chính xác; fresh trong dung sai ±0.01)
+file : [{'id': 'I1', 'kind': 'ca_linh', 'fresh': 99.99166666666666}]
+quán : [{'id': 'I1', 'kind': 'ca_linh', 'fresh': 99.992}]
+khớp id/kind: True | lệch fresh lớn nhất: 0.00033333333334439885
+
+# File kho đếm kiểu v1.0/v1.1 phải bị từ chối (mã 2)
+$ python3 -m chonoi.headless --mode quan --seed 1 --inventory kho-dem-cu.json --ticks 0 --out x.jsonl
+đầu vào sai: file kho items phải là mảng cá thể {id, kind, fresh} (contract v1.2)
+exit=2

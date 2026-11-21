@@ -89,3 +89,29 @@ Dòng `end` của day thêm `days_completed`; đủ Ngày thì `reason:"days_com
 
 **Giao diện sim <-> UI (thêm):** `GET /state` có `ui{screen, intro, stats, totals, menu, shop, days}`; `POST /input` nhận
 thêm `pause`, `shop_done`, `buy`; `POST /start | /menu | /quit | /skip` điều hướng menu / màn giới thiệu (không đi vào sim).
+
+---
+
+## 5. Contract v1.2 — kho cá thể và độ tươi (Phase 3, breaking change)
+
+Quyết định và bảng tác động: [`docs/adr/0001-kho-ca-the-v12.md`](../adr/0001-kho-ca-the-v12.md).
+
+**File kho / `gather_end.data.inventory` / snapshot `hold`, `stock`:**
+```json
+{"items": [{"id": "I1", "kind": "ca_linh", "fresh": 100}, {"id": "I2", "kind": "ca_loc", "fresh": 97.5}]}
+```
+- Đúng khóa gốc `items`, mảng cá thể; `id` chuỗi khác rỗng, duy nhất; `kind` thuộc 6 nguyên liệu; `fresh` hữu hạn
+  trong [0, 100]. Kho rỗng `{"items": []}`. File sắp theo id, fresh đủ độ chính xác để đọc lại giữ đúng nhánh ngưỡng 30.
+- File kho đếm `{"items": {kind: n}}` -> mã 2.
+- `hold` giữ thứ tự vào giỏ (LIFO khi mất hàng); `stock` (quán, Shop) sắp theo id.
+
+**Độ tươi:** tuning `freshness`; giỏ −0.5/s, kho quán −0.25/s (60 tick/s), kẹp 0; Shop và pause không hao; món
+chín không hao. Ươn: `fresh < spoiled_below`; event `spoiled {item_id, kind, location: hold|stock}` đúng một lần
+khi đi qua ngưỡng, nhiều cá thể cùng tick thì theo id.
+
+**Giữ chỗ / giá:** `customers[].reserved` là mảng id; mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id.
+Hàng giữ vừa ươn: nhả cả phần giữ, giữ lại đúng một lần (đơn theo order_tick rồi id bàn), thiếu -> unfulfillable.
+`cook_started.data.items` là mảng cá thể sắp theo kind rồi id; `base_price = floor(giá × TB fresh / 100)`.
+
+**Scenario:** `gather.hold`, `quan.stock` là mảng cá thể; mode day: Ngày 1 giữ id của mẫu `gather.hold`, Ngày kế
+cấp id mới theo thứ tự mảng.

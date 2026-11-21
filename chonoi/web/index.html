@@ -146,7 +146,24 @@ function bar(x, y, w, h, frac, color, label) {
 }
 const blink = () => Math.floor(Date.now() / 300) % 2 === 0;
 function fmtTime(ticks) { const s = Math.ceil(ticks / 60); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
-function counts(arr) { const m = {}; (arr || []).forEach((k) => (m[k] = (m[k] || 0) + 1)); return m; }
+// v1.2: giỏ / kho là mảng cá thể {id, kind, fresh}; hàng ươn (fresh < 30) không tính vào "đã lấy"
+const SPOIL = 30;
+const kindOf = (it) => (typeof it === "string" ? it : it.kind);
+const isSpoiled = (it) => typeof it === "object" && it.fresh < SPOIL;
+function counts(arr, skipSpoiled) { const m = {}; (arr || []).forEach((it) => { if (skipSpoiled && isSpoiled(it)) return; const k = kindOf(it); m[k] = (m[k] || 0) + 1; }); return m; }
+const freshColor = (f) => (f < SPOIL ? "#7d7d7d" : f < 50 ? "#ffb74d" : "#81c784");
+function itemSlots(arr, x0, y0, sz) {
+  // mỗi ô: màu loại, thanh độ tươi bên dưới, số % và nhãn "ươn" cho hàng hỏng
+  (arr || []).forEach((it, i) => {
+    const x = x0 + i * (sz + 6);
+    ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(x, y0, sz, sz);
+    ctx.globalAlpha = isSpoiled(it) ? 0.35 : 1; ctx.fillStyle = kc(kindOf(it)); ctx.fillRect(x + 3, y0 + 3, sz - 6, sz - 6); ctx.globalAlpha = 1;
+    const f = typeof it === "object" ? it.fresh : 100;
+    ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(x, y0 + sz + 2, sz, 6);
+    ctx.fillStyle = freshColor(f); ctx.fillRect(x, y0 + sz + 2, sz * Math.max(0, Math.min(1, f / 100)), 6);
+    text(isSpoiled(it) ? "ươn" : Math.floor(f) + "", x + sz / 2, y0 + sz / 2 + 7, { align: "center", bold: true, color: isSpoiled(it) ? "#ff8a80" : "#1a1a1a" });
+  });
+}
 function brief(d) { try { const s = JSON.stringify(d); return s.length > 48 ? s.slice(0, 45) + "…" : s; } catch (e) { return ""; } }
 function eventLog(w, h) {
   const ev = (snap.events || []).slice(-5);
@@ -157,7 +174,7 @@ function eventLog(w, h) {
 function drawGather(w, h) {
   const meta = snap.meta || {}, p = snap.player || {};
   const b = meta.bounds || { x: [0, 100], d: [0, 30] };
-  const X = b.x[1], D = b.d[1], SKY = 6, top = 96, bottom = 80;
+  const X = b.x[1], D = b.d[1], SKY = 6, top = 96, bottom = 150;
   const s = Math.max(1, Math.min((w - 20) / (X + 4), (h - top - bottom) / (D + SKY + 1)));
   const ox = (w - s * (X + 4)) / 2 + 2 * s, oy = top + SKY * s;
   const sx = (x) => ox + x * s, sy = (d) => oy + d * s;
@@ -222,11 +239,13 @@ function drawGather(w, h) {
     text("Thủy quái!", w / 2, top + 76, { align: "center", size: 30, bold: true, color: "#d9a6ff" });
   }
   // giỏ theo loại + cần lấy
-  const have = counts(snap.hold), cap = snap.hold_capacity || 12, y0 = h - bottom + 24;
-  text(`Giỏ ${snap.hold_count ?? 0}/${cap}: ` + (Object.keys(have).map((k) => kn(k) + "×" + have[k]).join(", ") || "(trống)"), 14, y0);
+  const have = counts(snap.hold, true), cap = snap.hold_capacity || 12, y0 = h - bottom + 28;
+  const spoiledN = (snap.hold || []).filter(isSpoiled).length;
+  text(`Giỏ ${snap.hold_count ?? 0}/${cap}` + (spoiledN ? ` · ${spoiledN} món ươn` : ""), 14, y0, { color: spoiledN ? "#ffab91" : "#e8eef2" });
+  itemSlots(snap.hold, 14, y0 + 10, 34);
   if (snap.day_plan) {
     const need = snap.day_plan.ingredients;
-    text("Cần lấy: " + Object.keys(need).map((k) => `${kn(k)} ${Math.min(have[k] || 0, need[k])}/${need[k]}`).join(" · "), 14, y0 + 28, { color: "#ffe9a8" });
+    text("Cần lấy (hàng tươi): " + Object.keys(need).map((k) => `${kn(k)} ${Math.min(have[k] || 0, need[k])}/${need[k]}`).join(" · "), 14, y0 + 78, { color: "#ffe9a8" });
   }
 }
 
@@ -274,11 +293,17 @@ function drawQuan(w, h) {
   // HUD
   text("⏱ " + fmtTime(snap.time_left_ticks), 14, 32, { size: 24, bold: true, color: snap.time_left_ticks <= 1800 ? "#ff6b6b" : "#e8eef2" });
   text(`Thu ca ${(u.stats && u.stats.money) || 0}k · Tiền ${snap.money ?? 0}k · Uy tín ${(snap.reputation ?? 0).toFixed(1)} · Điểm ${snap.score ?? 0}`, 130, 32);
-  const held = {};
-  (snap.customers || []).forEach((c) => Object.keys(c.reserved || {}).forEach((k) => (held[k] = (held[k] || 0) + c.reserved[k])));
-  const st = snap.stock || {};
-  text("Kho khả dụng: " + (Object.keys(st).map((k) => kn(k) + " " + (st[k] - (held[k] || 0))).join(", ") || "(trống)"), 14, 62, { color: "#cfd8dc" });
-  text("Trên tay: " + (snap.hand ? dn(snap.hand.dish_id) : "(trống)"), 14, 88, { color: "#ffe9a8" });
+  // kho khả dụng = cá thể chưa ươn và chưa ai giữ; kèm độ tươi trung bình và số món ươn từng loại
+  const held = new Set();
+  (snap.customers || []).forEach((c) => (c.reserved || []).forEach((id) => held.add(id)));
+  const byKind = {};
+  (snap.stock || []).forEach((it) => {
+    const b = (byKind[it.kind] = byKind[it.kind] || { free: 0, spoiled: 0, sum: 0, n: 0 });
+    if (isSpoiled(it)) b.spoiled++; else { b.sum += it.fresh; b.n++; if (!held.has(it.id)) b.free++; }
+  });
+  const parts = Object.keys(byKind).map((k) => { const b = byKind[k]; return `${kn(k)} ${b.free}` + (b.n ? ` (${Math.round(b.sum / b.n)}%)` : "") + (b.spoiled ? ` +${b.spoiled} ươn` : ""); });
+  text("Kho khả dụng: " + (parts.join(", ") || "(trống)"), 14, 62, { color: "#cfd8dc" });
+  text("Trên tay: " + (snap.hand ? `${dn(snap.hand.dish_id)} (${snap.hand.base_price}k)` : "(trống)"), 14, 88, { color: "#ffe9a8" });
 }
 
 // ----- SHOP -----
@@ -306,9 +331,10 @@ function introHtml() {
   if (it.kind === "day_intro") return `<h2>Ngày ${snap.day}</h2><p>Má Tư dặn: hôm nay quán nấu</p><ul>${li(plan.dishes, (d, n) => `${dn(d)} × ${n}`)}</ul>
     <p>Cần lấy: ${Object.keys(plan.ingredients).map((k) => kn(k) + " × " + plan.ingredients[k]).join(", ")}</p><p class="hint">Nhấn phím bất kỳ để xuống sông…</p>`;
   if (it.kind === "evening_intro") {
-    const stock = snap.stock || {}, menu = u.menu || {};
+    const all = counts(snap.stock), stock = counts(snap.stock, true), menu = u.menu || {};
+    const nSpoiled = (snap.stock || []).filter(isSpoiled).length;
     const can = Object.keys(plan.dishes).filter((d) => Object.keys(menu[d].recipe).every((k) => (stock[k] || 0) >= menu[d].recipe[k]));
-    return `<h2>Tối Ngày ${snap.day} — mở quán</h2><p>Nhập kho: ${Object.keys(stock).map((k) => kn(k) + " × " + stock[k]).join(", ") || "(không có gì)"}</p>
+    return `<h2>Tối Ngày ${snap.day} — mở quán</h2><p>Nhập kho: ${Object.keys(all).map((k) => kn(k) + " × " + all[k]).join(", ") || "(không có gì)"}${nSpoiled ? ` (${nSpoiled} món đã ươn)` : ""}</p>
       <p>Món nấu được: ${can.map(dn).join(", ") || "(chưa đủ nguyên liệu món nào)"}</p><p class="hint">Nhấn phím bất kỳ để mở quán…</p>`;
   }
   if (it.kind === "day_result") {

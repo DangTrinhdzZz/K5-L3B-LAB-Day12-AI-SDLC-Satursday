@@ -13,3 +13,8 @@
 | 9 | 2026-11-21 P2 | `recoil_dist` là tổng hay mỗi bước? | Tổng 2 m chia đều 60 bước (2/60 m/bước) như đề ghi. | Integrator |
 | 10 | 2026-11-21 P2 | Lệnh `buy` là `weapon`/`net` khi chưa làm mở rộng? | `buy_failed` reason `unknown` (đề: "Shop phát buy_failed nếu gặp lệnh không hỗ trợ"). | Integrator |
 | 11 | 2026-11-21 P2 | DayIntro / EveningIntro / DayResult có phải pha headless? | Không; chỉ là màn của cửa sổ chơi, sim dừng bước trong lúc hiện màn (headless không đổi). | Integrator |
+| 12 | 2026-11-21 P3 | Lưu độ tươi thế nào để đúng ở ngưỡng 30 và phép floor? | Phân số (`fractions.Fraction`): giỏ −1/120, quán −1/240 điểm mỗi tick; ra ngoài đổi về số, file kho ghi đủ độ chính xác. | Integrator |
+| 13 | 2026-11-21 P3 | Cá thể fixture đã < 30 ngay lúc dựng có phát `spoiled` không? | Không (chỉ phát khi đi từ ≥ 30 xuống < 30 trong một bước hao). | Integrator |
+| 14 | 2026-11-21 P3 | Đơn reserved fixture bỏ trống `reserved` mà không đủ hàng tươi? | `unfulfillable`, phần giữ rỗng (giữ giả định #1 của Phase 1). | Integrator |
+| 15 | 2026-11-21 P3 | Thứ tự id trong `customers[].reserved` của snapshot? | Theo kind của công thức (sắp tên kind) rồi theo thứ tự chọn (tươi nhất trước). | Integrator |
+| 16 | 2026-11-21 P3 | Có hỗ trợ song song kho đếm v1.1 không? | Không: contract chỉ khai "1.2", file kho đếm trả mã 2 (ADR-0001). | Integrator |
